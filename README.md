@@ -2,6 +2,10 @@
 
 QLab과 연결하여 기본적인 쇼 컨트롤 기능을 제공하는 Android 리모트 앱입니다.
 
+## 다운로드
+
+최신 릴리즈는 [Releases 페이지](https://github.com/okumi1012/QLabController-Android/releases)에서 다운로드할 수 있습니다.
+
 ## 기능
 
 - QLab과 OSC(Open Sound Control) 프로토콜로 연결
@@ -24,8 +28,15 @@ QLab과 연결하여 기본적인 쇼 컨트롤 기능을 제공하는 Android �
 
 ## 빌드 방법
 
+자세한 빌드 가이드는 [BUILD.md](BUILD.md)를 참조하세요.
+
+### 간단 빌드
 ```bash
+# 디버그 빌드
 ./gradlew assembleDebug
+
+# 릴리즈 빌드
+./gradlew assembleRelease
 ```
 
 ## 요구사항
