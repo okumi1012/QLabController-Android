@@ -3,6 +3,7 @@
     <string name="app_name">QLab Controller</string>
     <string name="qlab_ip_hint">QLab IP Address (e.g., 192.168.1.100)</string>
     <string name="qlab_port_hint">Port (default: 53000)</string>
+    <string name="qlab_passcode_hint">Passcode (optional)</string>
     <string name="connect">Connect</string>
     <string name="disconnect">Disconnect</string>
     <string name="go">GO</string>
