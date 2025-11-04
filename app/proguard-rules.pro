@@ -2,10 +2,6 @@
 # You can control the set of applied configuration files using the
 # proguardFiles setting in build.gradle.kts.
 
-# Keep OSC library classes
--keep class com.illposed.osc.** { *; }
--dontwarn com.illposed.osc.**
-
 # Keep Kotlin coroutines
 -keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
 -keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
