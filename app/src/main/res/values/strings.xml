@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">QLab Controller</string>
+    <string name="qlab_ip_hint">QLab IP Address (e.g., 192.168.1.100)</string>
+    <string name="qlab_port_hint">Port (default: 53000)</string>
+    <string name="connect">Connect</string>
+    <string name="disconnect">Disconnect</string>
+    <string name="go">GO</string>
+    <string name="panic">PANIC</string>
+    <string name="connected">Connected</string>
+    <string name="disconnected">Disconnected</string>
+    <string name="connection_status">Status: %s</string>
+</resources>
