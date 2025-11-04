@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 class ConnectionActivity : AppCompatActivity() {
     private lateinit var ipEditText: TextInputEditText
     private lateinit var portEditText: TextInputEditText
+    private lateinit var passcodeEditText: TextInputEditText
     private lateinit var connectButton: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,6 +26,7 @@ class ConnectionActivity : AppCompatActivity() {
     private fun initializeViews() {
         ipEditText = findViewById(R.id.ipEditText)
         portEditText = findViewById(R.id.portEditText)
+        passcodeEditText = findViewById(R.id.passcodeEditText)
         connectButton = findViewById(R.id.connectButton)
     }
 
@@ -37,6 +39,7 @@ class ConnectionActivity : AppCompatActivity() {
     private fun connect() {
         val ipAddress = ipEditText.text?.toString()?.trim()
         val portString = portEditText.text?.toString()?.trim()
+        val passcode = passcodeEditText.text?.toString()?.trim()
 
         if (ipAddress.isNullOrEmpty()) {
             Toast.makeText(this, "Please enter QLab IP address", Toast.LENGTH_SHORT).show()
@@ -50,7 +53,7 @@ class ConnectionActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             val qLabManager = QLabOscManager.getInstance()
-            val success = qLabManager.connect(ipAddress, port)
+            val success = qLabManager.connect(ipAddress, port, passcode)
 
             if (success) {
                 // Navigate to control activity
