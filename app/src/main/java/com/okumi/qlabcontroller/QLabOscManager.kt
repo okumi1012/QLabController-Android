@@ -150,6 +150,8 @@ class QLabOscManager private constructor() {
 
     private fun handleCueListResponse(json: JSONObject) {
         try {
+            Log.d(TAG, "Full JSON response: ${json.toString(2)}")
+
             val data = json.optJSONArray("data")
             if (data != null) {
                 // Check if this is workspace info
@@ -176,15 +178,15 @@ class QLabOscManager private constructor() {
                     cueList.clear()
                     for (i in 0 until data.length()) {
                         val cue = data.getJSONObject(i)
-                        cueList.add(
-                            CueData(
-                                uniqueId = cue.optString("uniqueID", ""),
-                                number = cue.optString("number", ""),
-                                name = cue.optString("name", "Untitled"),
-                                type = cue.optString("type", ""),
-                                notes = cue.optString("notes", "")
-                            )
+                        val cueData = CueData(
+                            uniqueId = cue.optString("uniqueID", ""),
+                            number = cue.optString("number", ""),
+                            name = cue.optString("name", "Untitled"),
+                            type = cue.optString("type", ""),
+                            notes = cue.optString("notes", "")
                         )
+                        cueList.add(cueData)
+                        Log.d(TAG, "Cue ${cueData.number}: ${cueData.name}, notes: '${cueData.notes}'")
                     }
                     Log.d(TAG, "Loaded ${cueList.size} cues")
 
@@ -217,14 +219,24 @@ class QLabOscManager private constructor() {
      * Request cues from a specific cue list
      */
     private fun requestCuesFromList(cueListId: String) {
-        sendOscMessage("/cue_id/$cueListId/children")
+        // Need to use workspace-specific path
+        workspaceId?.let { wsId ->
+            sendOscMessage("/workspace/$wsId/cue_id/$cueListId/children")
+        } ?: run {
+            // Fallback without workspace ID
+            sendOscMessage("/cue_id/$cueListId/children")
+        }
     }
 
     /**
      * Request current playback position
      */
     private fun requestPlaybackPosition() {
-        sendOscMessage("/playbackPosition")
+        workspaceId?.let { wsId ->
+            sendOscMessage("/workspace/$wsId/playbackPosition")
+        } ?: run {
+            sendOscMessage("/playbackPosition")
+        }
     }
 
     /**
@@ -319,6 +331,8 @@ class QLabOscManager private constructor() {
         val notes = if (currentIndex >= 0 && currentIndex < cueList.size) {
             cueList[currentIndex].notes
         } else ""
+
+        Log.d(TAG, "Current cue info - Index: $currentIndex, Notes: '$notes'")
 
         CueInfo(previous, current, next, notes)
     }
