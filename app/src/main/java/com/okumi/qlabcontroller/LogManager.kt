@@ -8,6 +8,7 @@ object LogManager {
     private val logs = mutableListOf<LogEntry>()
     private const val MAX_LOGS = 500
     private val dateFormat = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
+    private var enabled = false
 
     data class LogEntry(
         val timestamp: String,
@@ -15,6 +16,15 @@ object LogManager {
         val tag: String,
         val message: String
     )
+
+    fun setEnabled(enable: Boolean) {
+        enabled = enable
+        if (!enable) {
+            clear()
+        }
+    }
+
+    fun isEnabled(): Boolean = enabled
 
     fun d(tag: String, message: String) {
         android.util.Log.d(tag, message)
@@ -42,6 +52,8 @@ object LogManager {
     }
 
     private fun addLog(level: String, tag: String, message: String) {
+        if (!enabled) return
+
         synchronized(logs) {
             logs.add(LogEntry(
                 timestamp = dateFormat.format(Date()),

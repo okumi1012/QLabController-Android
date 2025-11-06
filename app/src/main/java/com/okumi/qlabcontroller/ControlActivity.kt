@@ -18,9 +18,11 @@ class ControlActivity : AppCompatActivity() {
 
     private lateinit var titleText: TextView
     private lateinit var infoButton: ImageButton
+    private lateinit var previous2CueText: TextView
     private lateinit var previousCueText: TextView
     private lateinit var currentCueText: TextView
     private lateinit var nextCueText: TextView
+    private lateinit var next2CueText: TextView
     private lateinit var notesText: TextView
 
     private lateinit var previousButton: Button
@@ -49,9 +51,11 @@ class ControlActivity : AppCompatActivity() {
     private fun initializeViews() {
         titleText = findViewById(R.id.titleText)
         infoButton = findViewById(R.id.infoButton)
+        previous2CueText = findViewById(R.id.previous2CueText)
         previousCueText = findViewById(R.id.previousCueText)
         currentCueText = findViewById(R.id.currentCueText)
         nextCueText = findViewById(R.id.nextCueText)
+        next2CueText = findViewById(R.id.next2CueText)
         notesText = findViewById(R.id.notesText)
 
         previousButton = findViewById(R.id.previousButton)
@@ -103,9 +107,11 @@ class ControlActivity : AppCompatActivity() {
         val cueInfo = qLabManager.getCurrentCueInfo()
         LogManager.d("ControlActivity", "Updating UI - Notes: '${cueInfo.currentNotes}'")
         runOnUiThread {
-            previousCueText.text = "Previous: ${cueInfo.previousCue}"
-            currentCueText.text = "Current: ${cueInfo.currentCue}"
-            nextCueText.text = "Next: ${cueInfo.nextCue}"
+            previous2CueText.text = cueInfo.previous2Cue
+            previousCueText.text = cueInfo.previousCue
+            currentCueText.text = cueInfo.currentCue
+            nextCueText.text = cueInfo.nextCue
+            next2CueText.text = cueInfo.next2Cue
 
             // Always show notes card, with default text if empty
             notesText.text = if (cueInfo.currentNotes.isNotEmpty()) {

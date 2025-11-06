@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Light theme colors -->
+    <!-- Dark theme colors -->
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>
@@ -11,9 +11,9 @@
     <color name="green_go">#FF4CAF50</color>
     <color name="red_panic">#FFF44336</color>
 
-    <!-- Light mode specific -->
-    <color name="background_light">#FFFFFFFF</color>
-    <color name="surface_light">#FFF5F5F5</color>
-    <color name="text_primary_light">#FF000000</color>
-    <color name="text_secondary_light">#FF757575</color>
+    <!-- Dark mode specific -->
+    <color name="background_dark">#FF121212</color>
+    <color name="surface_dark">#FF1E1E1E</color>
+    <color name="text_primary_dark">#FFFFFFFF</color>
+    <color name="text_secondary_dark">#FFB0B0B0</color>
 </resources>

@@ -549,6 +549,11 @@ class QLabOscManager private constructor() {
 
         LogManager.d(TAG, "Looking for currentCueId: '$currentCueId', found at index: $currentIndex, total cues: ${cueList.size}")
 
+        val previous2 = if (currentIndex > 1) {
+            val cue = cueList[currentIndex - 2]
+            "${cue.number} ${cue.name}"
+        } else "---"
+
         val previous = if (currentIndex > 0) {
             val cue = cueList[currentIndex - 1]
             "${cue.number} ${cue.name}"
@@ -564,12 +569,17 @@ class QLabOscManager private constructor() {
             "${cue.number} ${cue.name}"
         } else "---"
 
+        val next2 = if (currentIndex >= 0 && currentIndex < cueList.size - 2) {
+            val cue = cueList[currentIndex + 2]
+            "${cue.number} ${cue.name}"
+        } else "---"
+
         // Use currentCueNotes which is updated in real-time
         val notes = currentCueNotes
 
         LogManager.d(TAG, "Current cue info - Index: $currentIndex, Current: '$current', Notes length: ${notes.length}")
 
-        CueInfo(previous, current, next, notes)
+        CueInfo(previous2, previous, current, next, next2, notes)
     }
 
     /**
