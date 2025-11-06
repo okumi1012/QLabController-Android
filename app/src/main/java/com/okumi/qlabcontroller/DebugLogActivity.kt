@@ -6,6 +6,7 @@ import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.style.ForegroundColorSpan
 import android.widget.Button
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 
@@ -13,6 +14,7 @@ class DebugLogActivity : AppCompatActivity() {
 
     private lateinit var logText: TextView
     private lateinit var logCountText: TextView
+    private lateinit var logScrollView: ScrollView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -20,6 +22,7 @@ class DebugLogActivity : AppCompatActivity() {
 
         logText = findViewById(R.id.logText)
         logCountText = findViewById(R.id.logCountText)
+        logScrollView = findViewById(R.id.logScrollView)
 
         findViewById<Button>(R.id.backButton).setOnClickListener {
             finish()
@@ -72,9 +75,8 @@ class DebugLogActivity : AppCompatActivity() {
         logText.text = builder
 
         // Auto-scroll to bottom
-        val scrollView = findViewById<android.widget.ScrollView>(R.id.logText.parent as android.view.View)
-        scrollView?.post {
-            scrollView.fullScroll(android.view.View.FOCUS_DOWN)
+        logScrollView.post {
+            logScrollView.fullScroll(android.view.View.FOCUS_DOWN)
         }
     }
 

@@ -51,6 +51,7 @@
         android:layout_marginTop="4dp" />
 
     <ScrollView
+        android:id="@+id/logScrollView"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginTop="16dp"
