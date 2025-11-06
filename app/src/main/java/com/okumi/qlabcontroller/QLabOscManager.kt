@@ -1,9 +1,8 @@
 package com.okumi.qlabcontroller
 
 import android.util.Log
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
+import org.json.JSONObject
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
@@ -12,20 +11,22 @@ import java.nio.charset.StandardCharsets
 
 class QLabOscManager private constructor() {
     private var socket: DatagramSocket? = null
+    private var receiveSocket: DatagramSocket? = null
     private var isConnected = false
     private var qLabAddress: InetAddress? = null
     private var qLabPort: Int = 53000
+    private var receiveJob: Job? = null
 
-    // Mock cue tracking for demo purposes
-    private var currentCueIndex = 0
-    private val mockCues = listOf(
-        "Opening", "Scene 1", "Scene 2", "Scene 3",
-        "Intermission", "Scene 4", "Scene 5", "Finale"
-    )
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    // Real cue tracking
+    private var currentCueId: String? = null
+    private var cueList = mutableListOf<CueData>()
 
     companion object {
         private const val TAG = "QLabOscManager"
         private const val DEFAULT_PORT = 53000
+        private const val RECEIVE_PORT = 53001  // Port for receiving replies
 
         @Volatile
         private var instance: QLabOscManager? = null
@@ -37,12 +38,15 @@ class QLabOscManager private constructor() {
         }
     }
 
+    data class CueData(
+        val uniqueId: String,
+        val number: String,
+        val name: String,
+        val type: String
+    )
+
     /**
      * Connect to QLab
-     * @param ipAddress QLab IP address
-     * @param port QLab OSC port (default: 53000)
-     * @param passcode QLab passcode (optional)
-     * @return true if connection successful
      */
     suspend fun connect(ipAddress: String, port: Int = DEFAULT_PORT, passcode: String? = null): Boolean = withContext(Dispatchers.IO) {
         try {
@@ -50,19 +54,36 @@ class QLabOscManager private constructor() {
 
             qLabAddress = InetAddress.getByName(ipAddress)
             qLabPort = port
+
+            // Create send socket
             socket = DatagramSocket()
+
+            // Create receive socket on a fixed port
+            receiveSocket = DatagramSocket(RECEIVE_PORT)
             isConnected = true
 
             Log.d(TAG, "Connected to QLab at $ipAddress:$port")
 
+            // Start listening for replies
+            startReceiveLoop()
+
             // Send passcode authentication if provided
             if (!passcode.isNullOrEmpty()) {
-                delay(100) // Small delay to ensure socket is ready
+                delay(100)
                 val authSuccess = sendOscMessageWithArg("/connect", passcode)
                 if (!authSuccess) {
                     Log.w(TAG, "Failed to send passcode authentication")
+                    return@withContext false
                 }
+                // Wait a bit for authentication
+                delay(200)
             }
+
+            // Test connection and fetch initial cue info
+            delay(100)
+            requestCueList()
+            delay(100)
+            requestPlaybackPosition()
 
             true
         } catch (e: Exception) {
@@ -73,13 +94,118 @@ class QLabOscManager private constructor() {
     }
 
     /**
+     * Start receiving OSC replies from QLab
+     */
+    private fun startReceiveLoop() {
+        receiveJob?.cancel()
+        receiveJob = scope.launch {
+            val buffer = ByteArray(8192)
+            while (isActive && receiveSocket != null) {
+                try {
+                    val packet = DatagramPacket(buffer, buffer.size)
+                    receiveSocket?.receive(packet)
+
+                    val data = packet.data.copyOf(packet.length)
+                    parseOscReply(data)
+                } catch (e: Exception) {
+                    if (isActive) {
+                        Log.e(TAG, "Error receiving OSC reply", e)
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Parse OSC reply from QLab
+     */
+    private fun parseOscReply(data: ByteArray) {
+        try {
+            // Simple OSC parsing - look for JSON in the message
+            val message = String(data, StandardCharsets.UTF_8)
+
+            // QLab sends JSON data in OSC messages
+            val jsonStart = message.indexOf('{')
+            if (jsonStart >= 0) {
+                val jsonEnd = message.lastIndexOf('}')
+                if (jsonEnd > jsonStart) {
+                    val jsonStr = message.substring(jsonStart, jsonEnd + 1)
+                    val json = JSONObject(jsonStr)
+
+                    Log.d(TAG, "Received JSON: $jsonStr")
+
+                    // Handle different response types
+                    when {
+                        json.has("data") -> handleCueListResponse(json)
+                        json.has("uniqueID") -> handleCueResponse(json)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing OSC reply", e)
+        }
+    }
+
+    private fun handleCueListResponse(json: JSONObject) {
+        try {
+            val data = json.optJSONArray("data")
+            if (data != null) {
+                cueList.clear()
+                for (i in 0 until data.length()) {
+                    val cue = data.getJSONObject(i)
+                    cueList.add(
+                        CueData(
+                            uniqueId = cue.optString("uniqueID", ""),
+                            number = cue.optString("number", ""),
+                            name = cue.optString("name", "Untitled"),
+                            type = cue.optString("type", "")
+                        )
+                    )
+                }
+                Log.d(TAG, "Loaded ${cueList.size} cues")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error handling cue list response", e)
+        }
+    }
+
+    private fun handleCueResponse(json: JSONObject) {
+        try {
+            currentCueId = json.optString("uniqueID")
+            Log.d(TAG, "Current cue ID: $currentCueId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error handling cue response", e)
+        }
+    }
+
+    /**
+     * Request cue list from QLab
+     */
+    private fun requestCueList() {
+        sendOscMessage("/cueLists")
+    }
+
+    /**
+     * Request current playback position
+     */
+    private fun requestPlaybackPosition() {
+        sendOscMessage("/playbackPosition")
+    }
+
+    /**
      * Disconnect from QLab
      */
     fun disconnect() {
         try {
+            receiveJob?.cancel()
+            receiveJob = null
             socket?.close()
             socket = null
+            receiveSocket?.close()
+            receiveSocket = null
             isConnected = false
+            cueList.clear()
+            currentCueId = null
             Log.d(TAG, "Disconnected from QLab")
         } catch (e: Exception) {
             Log.e(TAG, "Error disconnecting from QLab", e)
@@ -91,8 +217,9 @@ class QLabOscManager private constructor() {
      */
     suspend fun sendGo(): Boolean = withContext(Dispatchers.IO) {
         val result = sendOscMessage("/go")
-        if (result && currentCueIndex < mockCues.size - 1) {
-            currentCueIndex++
+        if (result) {
+            delay(100)
+            requestPlaybackPosition()
         }
         result
     }
@@ -109,38 +236,61 @@ class QLabOscManager private constructor() {
      */
     suspend fun sendPrevious(): Boolean = withContext(Dispatchers.IO) {
         val result = sendOscMessage("/playhead/previous")
-        if (result && currentCueIndex > 0) {
-            currentCueIndex--
+        if (result) {
+            delay(100)
+            requestPlaybackPosition()
         }
         result
     }
 
     /**
-     * Send Next command to QLab (move playhead without triggering)
+     * Send Next command to QLab
      */
     suspend fun sendNext(): Boolean = withContext(Dispatchers.IO) {
         val result = sendOscMessage("/playhead/next")
-        if (result && currentCueIndex < mockCues.size - 1) {
-            currentCueIndex++
+        if (result) {
+            delay(100)
+            requestPlaybackPosition()
         }
         result
     }
 
     /**
      * Get current cue information
-     * Note: This is a simplified version. Real implementation would query QLab
      */
     suspend fun getCurrentCueInfo(): CueInfo = withContext(Dispatchers.IO) {
-        val previous = if (currentCueIndex > 0) mockCues[currentCueIndex - 1] else "---"
-        val current = if (currentCueIndex < mockCues.size) mockCues[currentCueIndex] else "---"
-        val next = if (currentCueIndex < mockCues.size - 1) mockCues[currentCueIndex + 1] else "---"
+        requestPlaybackPosition()
+        delay(50)  // Wait for response
+
+        val currentIndex = cueList.indexOfFirst { it.uniqueId == currentCueId }
+
+        val previous = if (currentIndex > 0) {
+            val cue = cueList[currentIndex - 1]
+            "${cue.number} ${cue.name}"
+        } else "---"
+
+        val current = if (currentIndex >= 0 && currentIndex < cueList.size) {
+            val cue = cueList[currentIndex]
+            "${cue.number} ${cue.name}"
+        } else "---"
+
+        val next = if (currentIndex >= 0 && currentIndex < cueList.size - 1) {
+            val cue = cueList[currentIndex + 1]
+            "${cue.number} ${cue.name}"
+        } else "---"
 
         CueInfo(previous, current, next)
     }
 
     /**
+     * Rename a cue
+     */
+    suspend fun renameCue(cueId: String, newName: String): Boolean = withContext(Dispatchers.IO) {
+        sendOscMessageWithArg("/cue_id/$cueId/name", newName)
+    }
+
+    /**
      * Send a custom OSC message to QLab
-     * @param address OSC address pattern
      */
     private fun sendOscMessage(address: String): Boolean {
         if (!isConnected || socket == null || qLabAddress == null) {
@@ -162,8 +312,6 @@ class QLabOscManager private constructor() {
 
     /**
      * Send OSC message with string argument
-     * @param address OSC address pattern
-     * @param arg String argument
      */
     private fun sendOscMessageWithArg(address: String, arg: String): Boolean {
         if (!isConnected || socket == null || qLabAddress == null) {
@@ -185,22 +333,18 @@ class QLabOscManager private constructor() {
 
     /**
      * Build OSC message bytes
-     * Simple implementation for address-only messages (no arguments)
      */
     private fun buildOscMessage(address: String): ByteArray {
         val addressBytes = address.toByteArray(StandardCharsets.UTF_8)
-        // OSC strings are null-terminated and padded to 4-byte boundary
         val paddedSize = ((addressBytes.size + 1 + 3) / 4) * 4
 
-        val buffer = ByteBuffer.allocate(paddedSize + 4) // +4 for type tag string
+        val buffer = ByteBuffer.allocate(paddedSize + 4)
 
-        // Write address string (null-terminated and padded)
         buffer.put(addressBytes)
         repeat(paddedSize - addressBytes.size) {
             buffer.put(0)
         }
 
-        // Write type tag string ",\0\0\0" (no arguments)
         buffer.put(','.code.toByte())
         buffer.put(0)
         buffer.put(0)
@@ -219,24 +363,20 @@ class QLabOscManager private constructor() {
         val argBytes = arg.toByteArray(StandardCharsets.UTF_8)
         val argPaddedSize = ((argBytes.size + 1 + 3) / 4) * 4
 
-        // Type tag ",s\0\0" for one string argument
         val typeTagSize = 4
 
         val buffer = ByteBuffer.allocate(addressPaddedSize + typeTagSize + argPaddedSize)
 
-        // Write address string (null-terminated and padded)
         buffer.put(addressBytes)
         repeat(addressPaddedSize - addressBytes.size) {
             buffer.put(0)
         }
 
-        // Write type tag string ",s\0\0" (one string argument)
         buffer.put(','.code.toByte())
         buffer.put('s'.code.toByte())
         buffer.put(0)
         buffer.put(0)
 
-        // Write argument string (null-terminated and padded)
         buffer.put(argBytes)
         repeat(argPaddedSize - argBytes.size) {
             buffer.put(0)
@@ -245,14 +385,8 @@ class QLabOscManager private constructor() {
         return buffer.array()
     }
 
-    /**
-     * Check if currently connected to QLab
-     */
     fun isConnected(): Boolean = isConnected
 
-    /**
-     * Get the current connection address
-     */
     fun getConnectionInfo(): String {
         return if (isConnected && qLabAddress != null) {
             "${qLabAddress?.hostAddress}:$qLabPort"
