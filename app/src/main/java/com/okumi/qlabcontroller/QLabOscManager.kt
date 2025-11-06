@@ -20,9 +20,15 @@ class QLabOscManager private constructor() {
 
     // Real cue tracking
     private var currentCueId: String? = null
+    private var currentCueNotes: String = ""
     private var cueList = mutableListOf<CueData>()
     private var workspaceId: String? = null
+    private var workspaceName: String = "QLab Controller"
     private var mainCueListId: String? = null
+
+    // Connection info
+    private var connectedIpAddress: String? = null
+    private var connectedPort: Int = DEFAULT_PORT
 
     companion object {
         private const val TAG = "QLabOscManager"
@@ -47,6 +53,13 @@ class QLabOscManager private constructor() {
         val notes: String = ""
     )
 
+    data class ConnectionInfo(
+        val workspaceName: String,
+        val ipAddress: String,
+        val port: Int,
+        val passcode: String
+    )
+
     private var savedPasscode: String? = null
 
     /**
@@ -59,6 +72,8 @@ class QLabOscManager private constructor() {
             qLabAddress = InetAddress.getByName(ipAddress)
             qLabPort = port
             savedPasscode = passcode
+            connectedIpAddress = ipAddress
+            connectedPort = port
 
             // Create send socket
             socket = DatagramSocket()
@@ -247,14 +262,29 @@ class QLabOscManager private constructor() {
                 LogManager.d(TAG, "Full JSON response: ${json.toString(2)}")
             }
 
-            // Check if data is a string (like playbackPosition response)
+            // Check if data is a string (like playbackPosition response or notes response)
             val dataString = json.optString("data", null)
             if (dataString != null && !json.has("data") || json.opt("data") is String) {
                 LogManager.d(TAG, "Data is a string: $dataString")
+
+                // Check if this is a notes response
+                val address = json.optString("address", "")
+                if (address.contains("/notes")) {
+                    currentCueNotes = dataString
+                    LogManager.d(TAG, "Updated current cue notes: '${currentCueNotes.take(50)}...'")
+                    return
+                }
+
                 // This might be a playback position (cue ID)
                 if (dataString.isNotEmpty() && dataString != "none") {
+                    val oldCueId = currentCueId
                     currentCueId = dataString
                     LogManager.d(TAG, "Updated current cue ID from data string: $currentCueId")
+
+                    // If cue changed, request notes for the new cue
+                    if (oldCueId != currentCueId) {
+                        requestCurrentCueNotes()
+                    }
                 }
                 return
             }
@@ -268,7 +298,7 @@ class QLabOscManager private constructor() {
                 if (firstItem.has("displayName") || firstItem.has("hasPasscode") || firstItem.has("version")) {
                     // This is workspace data
                     workspaceId = firstItem.optString("uniqueID")
-                    val workspaceName = firstItem.optString("displayName", "Unknown")
+                    workspaceName = firstItem.optString("displayName", "QLab Controller")
                     LogManager.d(TAG, "Got workspace: $workspaceName (ID: $workspaceId)")
                     return
                 }
@@ -283,22 +313,41 @@ class QLabOscManager private constructor() {
                         cueList.clear()
                         for (i in 0 until cuesArray.length()) {
                             val cue = cuesArray.getJSONObject(i)
+
+                            // Log all available fields for first few cues to debug
+                            if (i < 3) {
+                                LogManager.d(TAG, "Cue $i fields: ${cue.keys().asSequence().toList()}")
+                            }
+
+                            // Try different field names for name and notes
+                            val cueName = cue.optString("name", "").ifEmpty {
+                                cue.optString("listName", "Untitled")
+                            }
+
+                            val cueNotes = cue.optString("notes", "").ifEmpty {
+                                cue.optString("note", "")
+                            }
+
                             val cueData = CueData(
                                 uniqueId = cue.optString("uniqueID", ""),
                                 number = cue.optString("number", ""),
-                                name = cue.optString("name", "Untitled"),
+                                name = cueName,
                                 type = cue.optString("type", ""),
-                                notes = cue.optString("notes", "")
+                                notes = cueNotes
                             )
                             cueList.add(cueData)
                             if (i < 5) {  // Log first 5 cues
-                                LogManager.d(TAG, "Cue ${cueData.number}: ${cueData.name}, type: ${cueData.type}")
+                                LogManager.d(TAG, "Cue ${cueData.number}: ${cueData.name}, type: ${cueData.type}, notes: '${cueData.notes}'")
                             }
                         }
                         LogManager.d(TAG, "Loaded ${cueList.size} cues from cue list")
 
-                        // After loading cues, get playback position
+                        // After loading cues, get playback position and notes
                         requestPlaybackPosition()
+                        scope.launch {
+                            delay(100)
+                            requestCurrentCueNotes()
+                        }
                     }
                     return
                 }
@@ -387,6 +436,25 @@ class QLabOscManager private constructor() {
     }
 
     /**
+     * Request notes for the current cue
+     */
+    private fun requestCurrentCueNotes() {
+        // Find the uniqueID for the current cue number
+        val currentCue = cueList.firstOrNull {
+            it.uniqueId == currentCueId || it.number == currentCueId
+        }
+
+        if (currentCue != null && currentCue.uniqueId.isNotEmpty()) {
+            val command = workspaceId?.let { "/workspace/$it/cue_id/${currentCue.uniqueId}/notes" }
+                ?: "/cue_id/${currentCue.uniqueId}/notes"
+            LogManager.d(TAG, "Requesting notes for cue ${currentCue.number}: $command")
+            sendOscMessage(command)
+        } else {
+            LogManager.w(TAG, "Cannot request notes: cue not found for ID '$currentCueId'")
+        }
+    }
+
+    /**
      * Disconnect from QLab
      */
     fun disconnect() {
@@ -406,6 +474,7 @@ class QLabOscManager private constructor() {
             isConnected = false
             cueList.clear()
             currentCueId = null
+            currentCueNotes = ""
             workspaceId = null
             mainCueListId = null
             savedPasscode = null
@@ -480,6 +549,11 @@ class QLabOscManager private constructor() {
 
         LogManager.d(TAG, "Looking for currentCueId: '$currentCueId', found at index: $currentIndex, total cues: ${cueList.size}")
 
+        val previous2 = if (currentIndex > 1) {
+            val cue = cueList[currentIndex - 2]
+            "${cue.number} ${cue.name}"
+        } else "---"
+
         val previous = if (currentIndex > 0) {
             val cue = cueList[currentIndex - 1]
             "${cue.number} ${cue.name}"
@@ -495,13 +569,17 @@ class QLabOscManager private constructor() {
             "${cue.number} ${cue.name}"
         } else "---"
 
-        val notes = if (currentIndex >= 0 && currentIndex < cueList.size) {
-            cueList[currentIndex].notes
-        } else ""
+        val next2 = if (currentIndex >= 0 && currentIndex < cueList.size - 2) {
+            val cue = cueList[currentIndex + 2]
+            "${cue.number} ${cue.name}"
+        } else "---"
 
-        LogManager.d(TAG, "Current cue info - Index: $currentIndex, Current: '$current', Notes: '$notes'")
+        // Use currentCueNotes which is updated in real-time
+        val notes = currentCueNotes
 
-        CueInfo(previous, current, next, notes)
+        LogManager.d(TAG, "Current cue info - Index: $currentIndex, Current: '$current', Notes length: ${notes.length}")
+
+        CueInfo(previous2, previous, current, next, next2, notes)
     }
 
     /**
@@ -611,11 +689,18 @@ class QLabOscManager private constructor() {
 
     fun isConnected(): Boolean = isConnected
 
-    fun getConnectionInfo(): String {
-        return if (isConnected && qLabAddress != null) {
-            "${qLabAddress?.hostAddress}:$qLabPort"
+    fun getWorkspaceName(): String = workspaceName
+
+    fun getConnectionInfo(): ConnectionInfo? {
+        return if (isConnected && connectedIpAddress != null) {
+            ConnectionInfo(
+                workspaceName = workspaceName,
+                ipAddress = connectedIpAddress!!,
+                port = connectedPort,
+                passcode = savedPasscode ?: ""
+            )
         } else {
-            "Not connected"
+            null
         }
     }
 }
