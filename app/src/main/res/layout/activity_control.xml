@@ -7,95 +7,115 @@
     android:padding="16dp"
     tools:context=".ControlActivity">
 
+    <!-- Title with Workspace Name -->
     <TextView
-        android:id="@+id/statusText"
+        android:id="@+id/titleText"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:text="Connected"
-        android:textSize="14sp"
+        android:text="QLab Controller"
+        android:textSize="20sp"
+        android:textStyle="bold"
         android:textAlignment="center"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="8dp" />
+        app:layout_constraintEnd_toStartOf="@id/infoButton"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="8dp" />
 
+    <!-- Info Button -->
+    <ImageButton
+        android:id="@+id/infoButton"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:src="@android:drawable/ic_menu_info_details"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Connection Info"
+        app:layout_constraintTop_toTopOf="@id/titleText"
+        app:layout_constraintBottom_toBottomOf="@id/titleText"
+        app:layout_constraintEnd_toStartOf="@id/disconnectButton"
+        android:layout_marginEnd="8dp" />
+
+    <!-- Small Disconnect Button in corner -->
     <Button
         android:id="@+id/disconnectButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/disconnect"
-        android:backgroundTint="@color/black"
-        app:layout_constraintTop_toBottomOf="@id/statusText"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="8dp" />
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:text="✕"
+        android:textSize="20sp"
+        android:backgroundTint="@android:color/darker_gray"
+        android:padding="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-    <!-- Cue Information Card -->
+    <!-- GO Button at top -->
+    <Button
+        android:id="@+id/goButton"
+        android:layout_width="0dp"
+        android:layout_height="120dp"
+        android:layout_marginTop="16dp"
+        android:backgroundTint="@color/green_go"
+        android:text="@string/go"
+        android:textSize="42sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toBottomOf="@id/titleText"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- PANIC Button -->
+    <Button
+        android:id="@+id/panicButton"
+        android:layout_width="0dp"
+        android:layout_height="80dp"
+        android:layout_marginTop="12dp"
+        android:backgroundTint="@color/red_panic"
+        android:text="@string/panic"
+        android:textSize="32sp"
+        android:textStyle="bold"
+        app:layout_constraintTop_toBottomOf="@id/goButton"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <!-- Navigation Buttons -->
+    <LinearLayout
+        android:id="@+id/navigationLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="12dp"
+        app:layout_constraintTop_toBottomOf="@id/panicButton"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <Button
+            android:id="@+id/previousButton"
+            android:layout_width="0dp"
+            android:layout_height="60dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="8dp"
+            android:text="◀ PREV"
+            android:textSize="16sp"
+            android:backgroundTint="@color/purple_500" />
+
+        <Button
+            android:id="@+id/nextButton"
+            android:layout_width="0dp"
+            android:layout_height="60dp"
+            android:layout_weight="1"
+            android:layout_marginStart="8dp"
+            android:text="NEXT ▶"
+            android:textSize="16sp"
+            android:backgroundTint="@color/purple_500" />
+    </LinearLayout>
+
+    <!-- Cue Information Card (Compact) -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/cueInfoCard"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        app:cardCornerRadius="8dp"
-        app:cardElevation="4dp"
-        app:layout_constraintTop_toBottomOf="@id/disconnectButton"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Cue List"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="16dp" />
-
-            <TextView
-                android:id="@+id/previousCueText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Previous: ---"
-                android:textSize="14sp"
-                android:textColor="@android:color/darker_gray"
-                android:padding="8dp" />
-
-            <TextView
-                android:id="@+id/currentCueText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Current: ---"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="@color/purple_700"
-                android:padding="8dp"
-                android:background="@color/teal_200" />
-
-            <TextView
-                android:id="@+id/nextCueText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Next: ---"
-                android:textSize="14sp"
-                android:textColor="@android:color/darker_gray"
-                android:padding="8dp" />
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
-
-    <!-- Cue Notes Card -->
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/notesCard"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         app:cardCornerRadius="8dp"
-        app:cardElevation="2dp"
-        app:cardBackgroundColor="#FFF9E5"
-        app:layout_constraintTop_toBottomOf="@id/cueInfoCard"
+        app:cardElevation="4dp"
+        app:layout_constraintTop_toBottomOf="@id/navigationLayout"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
@@ -108,81 +128,87 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:text="Cue List"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/previousCueText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Previous: ---"
+                android:textSize="12sp"
+                android:textColor="@android:color/darker_gray"
+                android:padding="4dp" />
+
+            <TextView
+                android:id="@+id/currentCueText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Current: ---"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="@color/purple_700"
+                android:padding="6dp"
+                android:background="@color/teal_200" />
+
+            <TextView
+                android:id="@+id/nextCueText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Next: ---"
+                android:textSize="12sp"
+                android:textColor="@android:color/darker_gray"
+                android:padding="4dp" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Cue Notes Card - Always Visible, Fills Remaining Space -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/notesCard"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        app:cardCornerRadius="8dp"
+        app:cardElevation="2dp"
+        app:cardBackgroundColor="#FFF9E5"
+        app:layout_constraintTop_toBottomOf="@id/cueInfoCard"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:text="Notes"
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:textColor="#8B7500"
                 android:layout_marginBottom="4dp" />
 
-            <TextView
-                android:id="@+id/notesText"
+            <ScrollView
+                android:id="@+id/notesScrollView"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textSize="14sp"
-                android:textStyle="italic"
-                android:textColor="#5A4A00"
-                android:text="" />
+                android:layout_height="match_parent"
+                android:fillViewport="true">
+
+                <TextView
+                    android:id="@+id/notesText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="13sp"
+                    android:textStyle="italic"
+                    android:textColor="#5A4A00"
+                    android:text="No notes for this cue" />
+            </ScrollView>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
-
-    <!-- Navigation Buttons -->
-    <LinearLayout
-        android:id="@+id/navigationLayout"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="24dp"
-        app:layout_constraintTop_toBottomOf="@id/notesCard"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <Button
-            android:id="@+id/previousButton"
-            android:layout_width="0dp"
-            android:layout_height="70dp"
-            android:layout_weight="1"
-            android:layout_marginEnd="8dp"
-            android:text="◀ PREV"
-            android:textSize="16sp"
-            android:backgroundTint="@color/purple_500" />
-
-        <Button
-            android:id="@+id/nextButton"
-            android:layout_width="0dp"
-            android:layout_height="70dp"
-            android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:text="NEXT ▶"
-            android:textSize="16sp"
-            android:backgroundTint="@color/purple_500" />
-    </LinearLayout>
-
-    <!-- GO Button -->
-    <Button
-        android:id="@+id/goButton"
-        android:layout_width="0dp"
-        android:layout_height="120dp"
-        android:layout_marginTop="16dp"
-        android:backgroundTint="@color/green_go"
-        android:text="@string/go"
-        android:textSize="36sp"
-        android:textStyle="bold"
-        app:layout_constraintTop_toBottomOf="@id/navigationLayout"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <!-- PANIC Button -->
-    <Button
-        android:id="@+id/panicButton"
-        android:layout_width="0dp"
-        android:layout_height="100dp"
-        android:layout_marginTop="16dp"
-        android:backgroundTint="@color/red_panic"
-        android:text="@string/panic"
-        android:textSize="28sp"
-        android:textStyle="bold"
-        app:layout_constraintTop_toBottomOf="@id/goButton"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

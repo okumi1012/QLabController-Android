@@ -23,7 +23,12 @@ class QLabOscManager private constructor() {
     private var currentCueNotes: String = ""
     private var cueList = mutableListOf<CueData>()
     private var workspaceId: String? = null
+    private var workspaceName: String = "QLab Controller"
     private var mainCueListId: String? = null
+
+    // Connection info
+    private var connectedIpAddress: String? = null
+    private var connectedPort: Int = DEFAULT_PORT
 
     companion object {
         private const val TAG = "QLabOscManager"
@@ -48,6 +53,13 @@ class QLabOscManager private constructor() {
         val notes: String = ""
     )
 
+    data class ConnectionInfo(
+        val workspaceName: String,
+        val ipAddress: String,
+        val port: Int,
+        val passcode: String
+    )
+
     private var savedPasscode: String? = null
 
     /**
@@ -60,6 +72,8 @@ class QLabOscManager private constructor() {
             qLabAddress = InetAddress.getByName(ipAddress)
             qLabPort = port
             savedPasscode = passcode
+            connectedIpAddress = ipAddress
+            connectedPort = port
 
             // Create send socket
             socket = DatagramSocket()
@@ -284,7 +298,7 @@ class QLabOscManager private constructor() {
                 if (firstItem.has("displayName") || firstItem.has("hasPasscode") || firstItem.has("version")) {
                     // This is workspace data
                     workspaceId = firstItem.optString("uniqueID")
-                    val workspaceName = firstItem.optString("displayName", "Unknown")
+                    workspaceName = firstItem.optString("displayName", "QLab Controller")
                     LogManager.d(TAG, "Got workspace: $workspaceName (ID: $workspaceId)")
                     return
                 }
@@ -665,11 +679,18 @@ class QLabOscManager private constructor() {
 
     fun isConnected(): Boolean = isConnected
 
-    fun getConnectionInfo(): String {
-        return if (isConnected && qLabAddress != null) {
-            "${qLabAddress?.hostAddress}:$qLabPort"
+    fun getWorkspaceName(): String = workspaceName
+
+    fun getConnectionInfo(): ConnectionInfo? {
+        return if (isConnected && connectedIpAddress != null) {
+            ConnectionInfo(
+                workspaceName = workspaceName,
+                ipAddress = connectedIpAddress!!,
+                port = connectedPort,
+                passcode = savedPasscode ?: ""
+            )
         } else {
-            "Not connected"
+            null
         }
     }
 }
