@@ -24,7 +24,25 @@ class ConnectionActivity : AppCompatActivity() {
 
         initializeViews()
         loadSavedSettings()
+        handleIntentData()
         setupClickListeners()
+    }
+
+    private fun handleIntentData() {
+        // Check if we received connection info from network scan
+        val ipAddress = intent.getStringExtra("IP_ADDRESS")
+        val port = intent.getIntExtra("PORT", 53000)
+        val autoConnect = intent.getBooleanExtra("AUTO_CONNECT", false)
+
+        if (ipAddress != null) {
+            ipEditText.setText(ipAddress)
+            portEditText.setText(port.toString())
+
+            if (autoConnect) {
+                // Automatically connect
+                connect()
+            }
+        }
     }
 
     private fun initializeViews() {

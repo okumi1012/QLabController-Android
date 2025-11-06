@@ -4,6 +4,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
 
     <application
         android:allowBackup="true"
@@ -13,15 +14,30 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.QLabController">
 
-        <!-- Connection Activity - Entry Point -->
+        <!-- Main Activity - Entry Point -->
         <activity
-            android:name=".ConnectionActivity"
+            android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Network Scan Activity - Auto-discover QLab -->
+        <activity
+            android:name=".NetworkScanActivity"
+            android:exported="false" />
+
+        <!-- Connection Activity - Manual Connection -->
+        <activity
+            android:name=".ConnectionActivity"
+            android:exported="false" />
+
+        <!-- Settings Activity -->
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false" />
 
         <!-- Control Activity - Main Control Screen -->
         <activity
