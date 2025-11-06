@@ -118,7 +118,7 @@ class QLabOscManager private constructor() {
     private fun startReceiveLoop() {
         receiveJob?.cancel()
         receiveJob = scope.launch {
-            val buffer = ByteArray(8192)
+            val buffer = ByteArray(65536)  // Increased to 64KB for large responses
             while (isActive && receiveSocket != null) {
                 try {
                     val packet = DatagramPacket(buffer, buffer.size)
@@ -240,7 +240,24 @@ class QLabOscManager private constructor() {
 
     private fun handleCueListResponse(json: JSONObject) {
         try {
-            LogManager.d(TAG, "Full JSON response: ${json.toString(2)}")
+            // Don't log full JSON if it's too large
+            if (json.toString().length > 1000) {
+                LogManager.d(TAG, "JSON response size: ${json.toString().length} bytes (too large to log)")
+            } else {
+                LogManager.d(TAG, "Full JSON response: ${json.toString(2)}")
+            }
+
+            // Check if data is a string (like playbackPosition response)
+            val dataString = json.optString("data", null)
+            if (dataString != null && !json.has("data") || json.opt("data") is String) {
+                LogManager.d(TAG, "Data is a string: $dataString")
+                // This might be a playback position (cue ID)
+                if (dataString.isNotEmpty() && dataString != "none") {
+                    currentCueId = dataString
+                    LogManager.d(TAG, "Updated current cue ID from data string: $currentCueId")
+                }
+                return
+            }
 
             val data = json.optJSONArray("data")
             if (data != null && data.length() > 0) {
@@ -248,13 +265,41 @@ class QLabOscManager private constructor() {
                 LogManager.d(TAG, "First item keys: ${firstItem.keys().asSequence().toList()}")
 
                 // Check if this is workspace info (has uniqueID, displayName, etc)
-                // Workspace objects typically have: uniqueID, displayName, hasPasscode, version, etc
                 if (firstItem.has("displayName") || firstItem.has("hasPasscode") || firstItem.has("version")) {
                     // This is workspace data
                     workspaceId = firstItem.optString("uniqueID")
                     val workspaceName = firstItem.optString("displayName", "Unknown")
                     LogManager.d(TAG, "Got workspace: $workspaceName (ID: $workspaceId)")
-                    // Don't request cue lists here, wait for connect() to do it
+                    return
+                }
+
+                // Check if this is a cue list with nested cues array
+                if (firstItem.has("cues")) {
+                    val cuesArray = firstItem.optJSONArray("cues")
+                    mainCueListId = firstItem.optString("uniqueID")
+                    LogManager.d(TAG, "Got cue list with embedded cues (ID: $mainCueListId, ${cuesArray?.length() ?: 0} cues)")
+
+                    if (cuesArray != null && cuesArray.length() > 0) {
+                        cueList.clear()
+                        for (i in 0 until cuesArray.length()) {
+                            val cue = cuesArray.getJSONObject(i)
+                            val cueData = CueData(
+                                uniqueId = cue.optString("uniqueID", ""),
+                                number = cue.optString("number", ""),
+                                name = cue.optString("name", "Untitled"),
+                                type = cue.optString("type", ""),
+                                notes = cue.optString("notes", "")
+                            )
+                            cueList.add(cueData)
+                            if (i < 5) {  // Log first 5 cues
+                                LogManager.d(TAG, "Cue ${cueData.number}: ${cueData.name}, type: ${cueData.type}")
+                            }
+                        }
+                        LogManager.d(TAG, "Loaded ${cueList.size} cues from cue list")
+
+                        // After loading cues, get playback position
+                        requestPlaybackPosition()
+                    }
                     return
                 }
 
@@ -273,8 +318,8 @@ class QLabOscManager private constructor() {
                     }
                 }
 
-                // Otherwise, assume it's actual cue data (children of cue list)
-                LogManager.d(TAG, "Parsing as cue data (${data.length()} items)")
+                // Otherwise, assume it's actual cue data (direct array of cues)
+                LogManager.d(TAG, "Parsing as direct cue data (${data.length()} items)")
                 cueList.clear()
                 for (i in 0 until data.length()) {
                     val cue = data.getJSONObject(i)
@@ -286,7 +331,6 @@ class QLabOscManager private constructor() {
                         notes = cue.optString("notes", "")
                     )
                     cueList.add(cueData)
-                    LogManager.d(TAG, "Cue ${cueData.number}: ${cueData.name}, type: ${cueData.type}, notes: '${cueData.notes}'")
                 }
                 LogManager.d(TAG, "Loaded ${cueList.size} cues")
 
@@ -429,7 +473,12 @@ class QLabOscManager private constructor() {
         requestPlaybackPosition()
         delay(50)  // Wait for response
 
-        val currentIndex = cueList.indexOfFirst { it.uniqueId == currentCueId }
+        // Try to find by both uniqueID and number (playbackPosition returns cue number)
+        val currentIndex = cueList.indexOfFirst {
+            it.uniqueId == currentCueId || it.number == currentCueId
+        }
+
+        LogManager.d(TAG, "Looking for currentCueId: '$currentCueId', found at index: $currentIndex, total cues: ${cueList.size}")
 
         val previous = if (currentIndex > 0) {
             val cue = cueList[currentIndex - 1]
@@ -450,7 +499,7 @@ class QLabOscManager private constructor() {
             cueList[currentIndex].notes
         } else ""
 
-        LogManager.d(TAG, "Current cue info - Index: $currentIndex, Notes: '$notes'")
+        LogManager.d(TAG, "Current cue info - Index: $currentIndex, Current: '$current', Notes: '$notes'")
 
         CueInfo(previous, current, next, notes)
     }
