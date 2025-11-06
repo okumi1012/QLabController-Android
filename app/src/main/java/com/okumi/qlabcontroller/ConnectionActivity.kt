@@ -14,12 +14,16 @@ class ConnectionActivity : AppCompatActivity() {
     private lateinit var portEditText: TextInputEditText
     private lateinit var passcodeEditText: TextInputEditText
     private lateinit var connectButton: Button
+    private lateinit var settingsManager: SettingsManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_connection)
 
+        settingsManager = SettingsManager(this)
+
         initializeViews()
+        loadSavedSettings()
         setupClickListeners()
     }
 
@@ -28,6 +32,12 @@ class ConnectionActivity : AppCompatActivity() {
         portEditText = findViewById(R.id.portEditText)
         passcodeEditText = findViewById(R.id.passcodeEditText)
         connectButton = findViewById(R.id.connectButton)
+    }
+
+    private fun loadSavedSettings() {
+        settingsManager.ipAddress?.let { ipEditText.setText(it) }
+        portEditText.setText(settingsManager.port.toString())
+        settingsManager.passcode?.let { passcodeEditText.setText(it) }
     }
 
     private fun setupClickListeners() {
@@ -56,12 +66,15 @@ class ConnectionActivity : AppCompatActivity() {
             val success = qLabManager.connect(ipAddress, port, passcode)
 
             if (success) {
+                // Save connection settings
+                settingsManager.saveConnectionSettings(ipAddress, port, passcode)
+
                 // Navigate to control activity
                 val intent = Intent(this@ConnectionActivity, ControlActivity::class.java)
                 startActivity(intent)
                 finish()
             } else {
-                Toast.makeText(this@ConnectionActivity, "Failed to connect to QLab", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@ConnectionActivity, "Failed to connect to QLab. Check passcode or connection.", Toast.LENGTH_LONG).show()
                 connectButton.isEnabled = true
                 connectButton.text = getString(R.string.connect)
             }
