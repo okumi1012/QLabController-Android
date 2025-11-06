@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
@@ -16,6 +17,8 @@ class ControlActivity : AppCompatActivity() {
     private lateinit var previousCueText: TextView
     private lateinit var currentCueText: TextView
     private lateinit var nextCueText: TextView
+    private lateinit var notesText: TextView
+    private lateinit var notesCard: com.google.android.material.card.MaterialCardView
     private lateinit var statusText: TextView
 
     private lateinit var previousButton: Button
@@ -45,6 +48,8 @@ class ControlActivity : AppCompatActivity() {
         previousCueText = findViewById(R.id.previousCueText)
         currentCueText = findViewById(R.id.currentCueText)
         nextCueText = findViewById(R.id.nextCueText)
+        notesText = findViewById(R.id.notesText)
+        notesCard = findViewById(R.id.notesCard)
         statusText = findViewById(R.id.statusText)
 
         previousButton = findViewById(R.id.previousButton)
@@ -93,69 +98,60 @@ class ControlActivity : AppCompatActivity() {
             previousCueText.text = "Previous: ${cueInfo.previousCue}"
             currentCueText.text = "Current: ${cueInfo.currentCue}"
             nextCueText.text = "Next: ${cueInfo.nextCue}"
+
+            // Show or hide notes card
+            if (cueInfo.currentNotes.isNotEmpty()) {
+                notesText.text = cueInfo.currentNotes
+                notesCard.visibility = android.view.View.VISIBLE
+            } else {
+                notesCard.visibility = android.view.View.GONE
+            }
         }
     }
 
     private fun sendPreviousCommand() {
         lifecycleScope.launch {
-            val success = qLabManager.sendPrevious()
-            if (success) {
-                showFeedback("Previous cue")
-                updateCueInfo()
-            } else {
-                Toast.makeText(this@ControlActivity, "Failed to send Previous command", Toast.LENGTH_SHORT).show()
-            }
+            qLabManager.sendPrevious()
+            updateCueInfo()
         }
     }
 
     private fun sendGoCommand() {
         lifecycleScope.launch {
-            val success = qLabManager.sendGo()
-            if (success) {
-                showFeedback("GO sent")
-                updateCueInfo()
-            } else {
-                Toast.makeText(this@ControlActivity, "Failed to send GO command", Toast.LENGTH_SHORT).show()
-            }
+            qLabManager.sendGo()
+            updateCueInfo()
         }
     }
 
     private fun sendNextCommand() {
         lifecycleScope.launch {
-            val success = qLabManager.sendNext()
-            if (success) {
-                showFeedback("Next cue")
-                updateCueInfo()
-            } else {
-                Toast.makeText(this@ControlActivity, "Failed to send Next command", Toast.LENGTH_SHORT).show()
-            }
+            qLabManager.sendNext()
+            updateCueInfo()
         }
     }
 
     private fun sendPanicCommand() {
         lifecycleScope.launch {
-            val success = qLabManager.sendPanic()
-            if (success) {
-                showFeedback("PANIC sent")
-            } else {
-                Toast.makeText(this@ControlActivity, "Failed to send PANIC command", Toast.LENGTH_SHORT).show()
-            }
+            qLabManager.sendPanic()
         }
     }
 
     private fun disconnect() {
-        qLabManager.disconnect()
-        navigateToConnection()
+        AlertDialog.Builder(this)
+            .setTitle("Disconnect")
+            .setMessage("Are you sure you want to disconnect from QLab?")
+            .setPositiveButton("Disconnect") { _, _ ->
+                qLabManager.disconnect()
+                navigateToConnection()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun navigateToConnection() {
         val intent = Intent(this, ConnectionActivity::class.java)
         startActivity(intent)
         finish()
-    }
-
-    private fun showFeedback(message: String) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
     override fun onDestroy() {
