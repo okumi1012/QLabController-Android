@@ -536,6 +536,24 @@ class QLabOscManager private constructor() {
     }
 
     /**
+     * Send pause command
+     */
+    suspend fun sendPause(): Boolean = withContext(Dispatchers.IO) {
+        val command = workspaceId?.let { "/workspace/$it/pause" } ?: "/pause"
+        LogManager.d(TAG, "Sending PAUSE command: $command")
+        sendOscMessage(command)
+    }
+
+    /**
+     * Send resume command
+     */
+    suspend fun sendResume(): Boolean = withContext(Dispatchers.IO) {
+        val command = workspaceId?.let { "/workspace/$it/resume" } ?: "/resume"
+        LogManager.d(TAG, "Sending RESUME command: $command")
+        sendOscMessage(command)
+    }
+
+    /**
      * Get current cue information
      */
     suspend fun getCurrentCueInfo(): CueInfo = withContext(Dispatchers.IO) {

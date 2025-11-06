@@ -29,6 +29,8 @@ class ControlActivity : AppCompatActivity() {
     private lateinit var goButton: Button
     private lateinit var nextButton: Button
     private lateinit var panicButton: Button
+    private lateinit var pauseButton: Button
+    private lateinit var resumeButton: Button
     private lateinit var disconnectButton: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,6 +64,8 @@ class ControlActivity : AppCompatActivity() {
         goButton = findViewById(R.id.goButton)
         nextButton = findViewById(R.id.nextButton)
         panicButton = findViewById(R.id.panicButton)
+        pauseButton = findViewById(R.id.pauseButton)
+        resumeButton = findViewById(R.id.resumeButton)
         disconnectButton = findViewById(R.id.disconnectButton)
 
         // Set title to workspace name
@@ -87,6 +91,14 @@ class ControlActivity : AppCompatActivity() {
 
         panicButton.setOnClickListener {
             sendPanicCommand()
+        }
+
+        pauseButton.setOnClickListener {
+            sendPauseCommand()
+        }
+
+        resumeButton.setOnClickListener {
+            sendResumeCommand()
         }
 
         disconnectButton.setOnClickListener {
@@ -146,6 +158,18 @@ class ControlActivity : AppCompatActivity() {
     private fun sendPanicCommand() {
         lifecycleScope.launch {
             qLabManager.sendPanic()
+        }
+    }
+
+    private fun sendPauseCommand() {
+        lifecycleScope.launch {
+            qLabManager.sendPause()
+        }
+    }
+
+    private fun sendResumeCommand() {
+        lifecycleScope.launch {
+            qLabManager.sendResume()
         }
     }
 
