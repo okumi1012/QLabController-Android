@@ -39,6 +39,11 @@
             android:name=".SettingsActivity"
             android:exported="false" />
 
+        <!-- Debug Log Activity - View debug logs -->
+        <activity
+            android:name=".DebugLogActivity"
+            android:exported="false" />
+
         <!-- Control Activity - Main Control Screen -->
         <activity
             android:name=".ControlActivity"

@@ -5,7 +5,6 @@ import android.content.Intent
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
@@ -63,27 +62,27 @@ class NetworkScanActivity : AppCompatActivity() {
     private fun startDiscovery() {
         discoveryListener = object : NsdManager.DiscoveryListener {
             override fun onDiscoveryStarted(regType: String) {
-                Log.d(TAG, "Service discovery started")
+                LogManager.d(TAG, "Service discovery started")
                 runOnUiThread {
                     statusText.text = "Scanning for QLab instances..."
                 }
             }
 
             override fun onServiceFound(service: NsdServiceInfo) {
-                Log.d(TAG, "Service discovery success: $service")
+                LogManager.d(TAG, "Service discovery success: $service")
                 when {
                     service.serviceType != SERVICE_TYPE -> {
-                        Log.d(TAG, "Unknown Service Type: ${service.serviceType}")
+                        LogManager.d(TAG, "Unknown Service Type: ${service.serviceType}")
                     }
                     service.serviceName.contains("QLab", ignoreCase = true) -> {
-                        Log.d(TAG, "QLab service found: ${service.serviceName}")
+                        LogManager.d(TAG, "QLab service found: ${service.serviceName}")
                         nsdManager.resolveService(service, object : NsdManager.ResolveListener {
                             override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-                                Log.e(TAG, "Resolve failed: $errorCode")
+                                LogManager.e(TAG, "Resolve failed: $errorCode")
                             }
 
                             override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
-                                Log.d(TAG, "Resolve Succeeded. $serviceInfo")
+                                LogManager.d(TAG, "Resolve Succeeded. $serviceInfo")
                                 val device = QLabDevice(
                                     name = serviceInfo.serviceName,
                                     host = serviceInfo.host.hostAddress ?: "",
@@ -96,24 +95,24 @@ class NetworkScanActivity : AppCompatActivity() {
                         })
                     }
                     else -> {
-                        Log.d(TAG, "Not a QLab service: ${service.serviceName}")
+                        LogManager.d(TAG, "Not a QLab service: ${service.serviceName}")
                     }
                 }
             }
 
             override fun onServiceLost(service: NsdServiceInfo) {
-                Log.d(TAG, "Service lost: $service")
+                LogManager.d(TAG, "Service lost: $service")
                 runOnUiThread {
                     removeDevice(service.serviceName)
                 }
             }
 
             override fun onDiscoveryStopped(serviceType: String) {
-                Log.d(TAG, "Discovery stopped: $serviceType")
+                LogManager.d(TAG, "Discovery stopped: $serviceType")
             }
 
             override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
-                Log.e(TAG, "Discovery failed: Error code:$errorCode")
+                LogManager.e(TAG, "Discovery failed: Error code:$errorCode")
                 nsdManager.stopServiceDiscovery(this)
                 runOnUiThread {
                     statusText.text = "Failed to start network scan"
@@ -122,7 +121,7 @@ class NetworkScanActivity : AppCompatActivity() {
             }
 
             override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {
-                Log.e(TAG, "Discovery failed: Error code:$errorCode")
+                LogManager.e(TAG, "Discovery failed: Error code:$errorCode")
                 nsdManager.stopServiceDiscovery(this)
             }
         }
@@ -130,7 +129,7 @@ class NetworkScanActivity : AppCompatActivity() {
         try {
             nsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to start discovery", e)
+            LogManager.e(TAG, "Failed to start discovery", e)
             statusText.text = "Failed to start network scan: ${e.message}"
             progressBar.visibility = View.GONE
         }
@@ -185,7 +184,7 @@ class NetworkScanActivity : AppCompatActivity() {
             try {
                 nsdManager.stopServiceDiscovery(it)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to stop discovery", e)
+                LogManager.e(TAG, "Failed to stop discovery", e)
             }
         }
     }
@@ -196,7 +195,7 @@ class NetworkScanActivity : AppCompatActivity() {
             try {
                 nsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to restart discovery", e)
+                LogManager.e(TAG, "Failed to restart discovery", e)
             }
         }
     }
@@ -207,7 +206,7 @@ class NetworkScanActivity : AppCompatActivity() {
             try {
                 nsdManager.stopServiceDiscovery(it)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to stop discovery in onDestroy", e)
+                LogManager.e(TAG, "Failed to stop discovery in onDestroy", e)
             }
         }
     }

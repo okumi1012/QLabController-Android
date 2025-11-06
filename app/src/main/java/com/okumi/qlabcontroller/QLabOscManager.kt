@@ -1,6 +1,5 @@
 package com.okumi.qlabcontroller
 
-import android.util.Log
 import kotlinx.coroutines.*
 import org.json.JSONObject
 import java.net.DatagramPacket
@@ -68,7 +67,7 @@ class QLabOscManager private constructor() {
             receiveSocket = DatagramSocket(RECEIVE_PORT)
             isConnected = true
 
-            Log.d(TAG, "Connected to QLab at $ipAddress:$port")
+            LogManager.d(TAG, "Connected to QLab at $ipAddress:$port")
 
             // Start listening for replies
             startReceiveLoop()
@@ -78,7 +77,7 @@ class QLabOscManager private constructor() {
                 delay(100)
                 val authSuccess = sendOscMessageWithArg("/connect", passcode)
                 if (!authSuccess) {
-                    Log.w(TAG, "Failed to send passcode authentication")
+                    LogManager.w(TAG, "Failed to send passcode authentication")
                 }
                 delay(200)
             }
@@ -90,7 +89,7 @@ class QLabOscManager private constructor() {
 
             // If we got workspace ID, re-authenticate with workspace-specific path
             if (!passcode.isNullOrEmpty() && workspaceId != null) {
-                Log.d(TAG, "Re-authenticating with workspace ID: $workspaceId")
+                LogManager.d(TAG, "Re-authenticating with workspace ID: $workspaceId")
                 sendOscMessageWithArg("/workspace/$workspaceId/connect", passcode)
                 delay(200)
             }
@@ -100,14 +99,14 @@ class QLabOscManager private constructor() {
                 requestCueLists()
             } else {
                 // Try fallback without workspace ID
-                Log.w(TAG, "No workspace ID, trying fallback cue list request")
+                LogManager.w(TAG, "No workspace ID, trying fallback cue list request")
                 sendOscMessage("/cueLists")
             }
             delay(300)
 
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to connect to QLab", e)
+            LogManager.e(TAG, "Failed to connect to QLab", e)
             isConnected = false
             false
         }
@@ -129,7 +128,7 @@ class QLabOscManager private constructor() {
                     parseOscReply(data)
                 } catch (e: Exception) {
                     if (isActive) {
-                        Log.e(TAG, "Error receiving OSC reply", e)
+                        LogManager.e(TAG, "Error receiving OSC reply", e)
                     }
                 }
             }
@@ -148,7 +147,7 @@ class QLabOscManager private constructor() {
             val firstNull = message.indexOf('\u0000')
             val address = if (firstNull > 0) message.substring(0, firstNull) else ""
 
-            Log.d(TAG, "Received OSC message (${data.size} bytes), address: '$address'")
+            LogManager.d(TAG, "Received OSC message (${data.size} bytes), address: '$address'")
 
             // Handle real-time update messages from QLab
             if (address.startsWith("/update/")) {
@@ -165,25 +164,25 @@ class QLabOscManager private constructor() {
 
                     try {
                         val json = JSONObject(jsonStr)
-                        Log.d(TAG, "Parsed JSON successfully, has 'data': ${json.has("data")}, has 'status': ${json.has("status")}")
+                        LogManager.d(TAG, "Parsed JSON successfully, has 'data': ${json.has("data")}, has 'status': ${json.has("status")}")
 
                         // Handle different response types
                         when {
                             json.has("data") -> handleCueListResponse(json)
                             json.has("uniqueID") -> handleCueResponse(json)
-                            else -> Log.w(TAG, "Unknown JSON format: ${json.keys().asSequence().toList()}")
+                            else -> LogManager.w(TAG, "Unknown JSON format: ${json.keys().asSequence().toList()}")
                         }
                     } catch (jsonE: Exception) {
-                        Log.e(TAG, "Failed to parse JSON: $jsonStr", jsonE)
+                        LogManager.e(TAG, "Failed to parse JSON: $jsonStr", jsonE)
                     }
                 } else {
-                    Log.w(TAG, "No valid JSON found in message")
+                    LogManager.w(TAG, "No valid JSON found in message")
                 }
             } else {
-                Log.d(TAG, "No JSON in message, raw content (first 100 chars): ${message.take(100)}")
+                LogManager.d(TAG, "No JSON in message, raw content (first 100 chars): ${message.take(100)}")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error parsing OSC reply", e)
+            LogManager.e(TAG, "Error parsing OSC reply", e)
         }
     }
 
@@ -192,7 +191,7 @@ class QLabOscManager private constructor() {
      */
     private fun handleUpdateMessage(address: String, fullMessage: String) {
         try {
-            Log.d(TAG, "Update message: $address")
+            LogManager.d(TAG, "Update message: $address")
 
             when {
                 // Playback position changed: /update/workspace/{id}/cueList/{cueListId}/playbackPosition {cueId}
@@ -207,46 +206,46 @@ class QLabOscManager private constructor() {
                         val cueIdEnd = afterTypeTag.indexOf('\u0000')
                         if (cueIdEnd > 0) {
                             currentCueId = afterTypeTag.substring(0, cueIdEnd)
-                            Log.d(TAG, "Playback position updated to cue: $currentCueId")
+                            LogManager.d(TAG, "Playback position updated to cue: $currentCueId")
                         } else {
                             // No cue ID means playback position is cleared
                             currentCueId = null
-                            Log.d(TAG, "Playback position cleared")
+                            LogManager.d(TAG, "Playback position cleared")
                         }
                     }
                 }
 
                 // Workspace updated: /update/workspace/{id}
                 address.matches(Regex("/update/workspace/[^/]+$")) -> {
-                    Log.d(TAG, "Workspace updated, reloading cue lists")
+                    LogManager.d(TAG, "Workspace updated, reloading cue lists")
                     requestCueLists()
                 }
 
                 // Specific cue updated: /update/workspace/{id}/cue_id/{cueId}
                 address.contains("/cue_id/") -> {
-                    Log.d(TAG, "Cue updated, may need to reload cue data")
+                    LogManager.d(TAG, "Cue updated, may need to reload cue data")
                     // Could reload specific cue here if needed
                 }
 
                 // Disconnect requested: /update/workspace/{id}/disconnect
                 address.endsWith("/disconnect") -> {
-                    Log.w(TAG, "QLab requested disconnect")
+                    LogManager.w(TAG, "QLab requested disconnect")
                     disconnect()
                 }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error handling update message", e)
+            LogManager.e(TAG, "Error handling update message", e)
         }
     }
 
     private fun handleCueListResponse(json: JSONObject) {
         try {
-            Log.d(TAG, "Full JSON response: ${json.toString(2)}")
+            LogManager.d(TAG, "Full JSON response: ${json.toString(2)}")
 
             val data = json.optJSONArray("data")
             if (data != null && data.length() > 0) {
                 val firstItem = data.getJSONObject(0)
-                Log.d(TAG, "First item keys: ${firstItem.keys().asSequence().toList()}")
+                LogManager.d(TAG, "First item keys: ${firstItem.keys().asSequence().toList()}")
 
                 // Check if this is workspace info (has uniqueID, displayName, etc)
                 // Workspace objects typically have: uniqueID, displayName, hasPasscode, version, etc
@@ -254,7 +253,7 @@ class QLabOscManager private constructor() {
                     // This is workspace data
                     workspaceId = firstItem.optString("uniqueID")
                     val workspaceName = firstItem.optString("displayName", "Unknown")
-                    Log.d(TAG, "Got workspace: $workspaceName (ID: $workspaceId)")
+                    LogManager.d(TAG, "Got workspace: $workspaceName (ID: $workspaceId)")
                     // Don't request cue lists here, wait for connect() to do it
                     return
                 }
@@ -262,12 +261,12 @@ class QLabOscManager private constructor() {
                 // Check if this is cue lists data (array of Cue List objects)
                 if (firstItem.has("type")) {
                     val itemType = firstItem.optString("type")
-                    Log.d(TAG, "Item type: $itemType")
+                    LogManager.d(TAG, "Item type: $itemType")
 
                     if (itemType == "Cue List") {
                         mainCueListId = firstItem.optString("uniqueID")
                         val cueListName = firstItem.optString("name", "Main")
-                        Log.d(TAG, "Got cue list: $cueListName (ID: $mainCueListId)")
+                        LogManager.d(TAG, "Got cue list: $cueListName (ID: $mainCueListId)")
                         // Request the actual cues from this cue list
                         mainCueListId?.let { requestCuesFromList(it) }
                         return
@@ -275,7 +274,7 @@ class QLabOscManager private constructor() {
                 }
 
                 // Otherwise, assume it's actual cue data (children of cue list)
-                Log.d(TAG, "Parsing as cue data (${data.length()} items)")
+                LogManager.d(TAG, "Parsing as cue data (${data.length()} items)")
                 cueList.clear()
                 for (i in 0 until data.length()) {
                     val cue = data.getJSONObject(i)
@@ -287,26 +286,26 @@ class QLabOscManager private constructor() {
                         notes = cue.optString("notes", "")
                     )
                     cueList.add(cueData)
-                    Log.d(TAG, "Cue ${cueData.number}: ${cueData.name}, type: ${cueData.type}, notes: '${cueData.notes}'")
+                    LogManager.d(TAG, "Cue ${cueData.number}: ${cueData.name}, type: ${cueData.type}, notes: '${cueData.notes}'")
                 }
-                Log.d(TAG, "Loaded ${cueList.size} cues")
+                LogManager.d(TAG, "Loaded ${cueList.size} cues")
 
                 // After loading cues, get playback position
                 requestPlaybackPosition()
             } else {
-                Log.w(TAG, "Response has no data array or data is empty")
+                LogManager.w(TAG, "Response has no data array or data is empty")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "Error handling cue list response", e)
+            LogManager.e(TAG, "Error handling cue list response", e)
         }
     }
 
     private fun handleCueResponse(json: JSONObject) {
         try {
             currentCueId = json.optString("uniqueID")
-            Log.d(TAG, "Current cue ID: $currentCueId")
+            LogManager.d(TAG, "Current cue ID: $currentCueId")
         } catch (e: Exception) {
-            Log.e(TAG, "Error handling cue response", e)
+            LogManager.e(TAG, "Error handling cue response", e)
         }
     }
 
@@ -348,7 +347,7 @@ class QLabOscManager private constructor() {
      */
     fun disconnect() {
         try {
-            Log.d(TAG, "Disconnecting from QLab...")
+            LogManager.d(TAG, "Disconnecting from QLab...")
             // Disable updates before disconnecting (removed as it may not be needed)
             // if (isConnected) {
             //     sendOscMessageWithArg("/updates", "0")
@@ -366,9 +365,9 @@ class QLabOscManager private constructor() {
             workspaceId = null
             mainCueListId = null
             savedPasscode = null
-            Log.d(TAG, "Disconnected from QLab successfully")
+            LogManager.d(TAG, "Disconnected from QLab successfully")
         } catch (e: Exception) {
-            Log.e(TAG, "Error disconnecting from QLab", e)
+            LogManager.e(TAG, "Error disconnecting from QLab", e)
         }
     }
 
@@ -377,7 +376,7 @@ class QLabOscManager private constructor() {
      */
     suspend fun sendGo(): Boolean = withContext(Dispatchers.IO) {
         val command = workspaceId?.let { "/workspace/$it/go" } ?: "/go"
-        Log.d(TAG, "Sending GO command: $command")
+        LogManager.d(TAG, "Sending GO command: $command")
         val result = sendOscMessage(command)
         if (result) {
             delay(100)
@@ -391,7 +390,7 @@ class QLabOscManager private constructor() {
      */
     suspend fun sendPanic(): Boolean = withContext(Dispatchers.IO) {
         val command = workspaceId?.let { "/workspace/$it/panic" } ?: "/panic"
-        Log.d(TAG, "Sending PANIC command: $command")
+        LogManager.d(TAG, "Sending PANIC command: $command")
         sendOscMessage(command)
     }
 
@@ -400,7 +399,7 @@ class QLabOscManager private constructor() {
      */
     suspend fun sendPrevious(): Boolean = withContext(Dispatchers.IO) {
         val command = workspaceId?.let { "/workspace/$it/playhead/previous" } ?: "/previous"
-        Log.d(TAG, "Sending PREVIOUS command: $command")
+        LogManager.d(TAG, "Sending PREVIOUS command: $command")
         val result = sendOscMessage(command)
         if (result) {
             delay(100)
@@ -414,7 +413,7 @@ class QLabOscManager private constructor() {
      */
     suspend fun sendNext(): Boolean = withContext(Dispatchers.IO) {
         val command = workspaceId?.let { "/workspace/$it/playhead/next" } ?: "/next"
-        Log.d(TAG, "Sending NEXT command: $command")
+        LogManager.d(TAG, "Sending NEXT command: $command")
         val result = sendOscMessage(command)
         if (result) {
             delay(100)
@@ -451,7 +450,7 @@ class QLabOscManager private constructor() {
             cueList[currentIndex].notes
         } else ""
 
-        Log.d(TAG, "Current cue info - Index: $currentIndex, Notes: '$notes'")
+        LogManager.d(TAG, "Current cue info - Index: $currentIndex, Notes: '$notes'")
 
         CueInfo(previous, current, next, notes)
     }
@@ -461,7 +460,7 @@ class QLabOscManager private constructor() {
      */
     suspend fun renameCue(cueId: String, newName: String): Boolean = withContext(Dispatchers.IO) {
         val command = workspaceId?.let { "/workspace/$it/cue_id/$cueId/name" } ?: "/cue_id/$cueId/name"
-        Log.d(TAG, "Renaming cue: $command to '$newName'")
+        LogManager.d(TAG, "Renaming cue: $command to '$newName'")
         sendOscMessageWithArg(command, newName)
     }
 
@@ -470,7 +469,7 @@ class QLabOscManager private constructor() {
      */
     private fun sendOscMessage(address: String): Boolean {
         if (!isConnected || socket == null || qLabAddress == null) {
-            Log.w(TAG, "Not connected to QLab")
+            LogManager.w(TAG, "Not connected to QLab")
             return false
         }
 
@@ -478,10 +477,10 @@ class QLabOscManager private constructor() {
             val oscBytes = buildOscMessage(address)
             val packet = DatagramPacket(oscBytes, oscBytes.size, qLabAddress, qLabPort)
             socket?.send(packet)
-            Log.d(TAG, "Sent OSC message: $address")
+            LogManager.d(TAG, "Sent OSC message: $address")
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to send OSC message: $address", e)
+            LogManager.e(TAG, "Failed to send OSC message: $address", e)
             false
         }
     }
@@ -491,7 +490,7 @@ class QLabOscManager private constructor() {
      */
     private fun sendOscMessageWithArg(address: String, arg: String): Boolean {
         if (!isConnected || socket == null || qLabAddress == null) {
-            Log.w(TAG, "Not connected to QLab")
+            LogManager.w(TAG, "Not connected to QLab")
             return false
         }
 
@@ -499,10 +498,10 @@ class QLabOscManager private constructor() {
             val oscBytes = buildOscMessageWithStringArg(address, arg)
             val packet = DatagramPacket(oscBytes, oscBytes.size, qLabAddress, qLabPort)
             socket?.send(packet)
-            Log.d(TAG, "Sent OSC message: $address with arg: $arg")
+            LogManager.d(TAG, "Sent OSC message: $address with arg: $arg")
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to send OSC message: $address", e)
+            LogManager.e(TAG, "Failed to send OSC message: $address", e)
             false
         }
     }

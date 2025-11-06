@@ -94,7 +94,7 @@ class ControlActivity : AppCompatActivity() {
 
     private suspend fun updateCueInfo() {
         val cueInfo = qLabManager.getCurrentCueInfo()
-        android.util.Log.d("ControlActivity", "Updating UI - Notes: '${cueInfo.currentNotes}'")
+        LogManager.d("ControlActivity", "Updating UI - Notes: '${cueInfo.currentNotes}'")
         runOnUiThread {
             previousCueText.text = "Previous: ${cueInfo.previousCue}"
             currentCueText.text = "Current: ${cueInfo.currentCue}"
@@ -102,11 +102,11 @@ class ControlActivity : AppCompatActivity() {
 
             // Show or hide notes card
             if (cueInfo.currentNotes.isNotEmpty()) {
-                android.util.Log.d("ControlActivity", "Showing notes card with text: ${cueInfo.currentNotes}")
+                LogManager.d("ControlActivity", "Showing notes card with text: ${cueInfo.currentNotes}")
                 notesText.text = cueInfo.currentNotes
                 notesCard.visibility = android.view.View.VISIBLE
             } else {
-                android.util.Log.d("ControlActivity", "Hiding notes card (empty notes)")
+                LogManager.d("ControlActivity", "Hiding notes card (empty notes)")
                 notesCard.visibility = android.view.View.GONE
             }
         }
