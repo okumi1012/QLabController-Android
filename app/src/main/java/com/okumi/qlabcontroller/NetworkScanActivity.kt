@@ -76,11 +76,13 @@ class NetworkScanActivity : AppCompatActivity() {
                     LogManager.d(TAG, "QLab service found: ${service.serviceName}")
 
                     try {
+                        @Suppress("DEPRECATION")
                         nsdManager.resolveService(service, object : NsdManager.ResolveListener {
                             override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
                                 LogManager.e(TAG, "Resolve failed: ${serviceInfo.serviceName}, error: $errorCode")
                             }
 
+                            @Suppress("DEPRECATION")
                             override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
                                 LogManager.d(TAG, "Service resolved: ${serviceInfo.serviceName} at ${serviceInfo.host}:${serviceInfo.port}")
                                 val device = QLabDevice(

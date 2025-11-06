@@ -181,7 +181,6 @@ class ControlActivity : AppCompatActivity() {
         }
 
         // Create a custom view for the dialog
-        val dialogView = layoutInflater.inflate(android.R.layout.simple_list_item_1, null)
         val messageText = TextView(this).apply {
             text = buildString {
                 append("Workspace: ${connectionInfo.workspaceName}\n\n")

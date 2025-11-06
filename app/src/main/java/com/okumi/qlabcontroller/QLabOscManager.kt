@@ -211,8 +211,6 @@ class QLabOscManager private constructor() {
             when {
                 // Playback position changed: /update/workspace/{id}/cueList/{cueListId}/playbackPosition {cueId}
                 address.contains("/playbackPosition") -> {
-                    // Extract cue ID from the message arguments
-                    val parts = address.split("/")
                     // Try to find the cue ID in the message data
                     val typeTagStart = fullMessage.indexOf(',')
                     if (typeTagStart > 0) {
@@ -263,8 +261,8 @@ class QLabOscManager private constructor() {
             }
 
             // Check if data is a string (like playbackPosition response or notes response)
-            val dataString = json.optString("data", null)
-            if (dataString != null && !json.has("data") || json.opt("data") is String) {
+            val dataString = json.opt("data") as? String
+            if (dataString != null) {
                 LogManager.d(TAG, "Data is a string: $dataString")
 
                 // Check if this is a notes response

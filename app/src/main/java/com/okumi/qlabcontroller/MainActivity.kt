@@ -116,8 +116,6 @@ class MainActivity : AppCompatActivity() {
     private fun proceedWithConnection(connection: SavedConnection) {
         lifecycleScope.launch {
             try {
-                val qLabManager = QLabOscManager.getInstance()
-
                 // Navigate to connection activity with pre-filled data
                 val intent = Intent(this@MainActivity, ConnectionActivity::class.java)
                 intent.putExtra("IP_ADDRESS", connection.ipAddress)

@@ -48,6 +48,7 @@ class NsdHelper(private val context: Context) {
                         LogManager.e(TAG, "Resolve failed: ${serviceInfo.serviceName}, error: $errorCode")
                     }
 
+                    @Suppress("DEPRECATION")
                     override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
                         LogManager.d(TAG, "Service resolved: ${serviceInfo.serviceName} at ${serviceInfo.host}:${serviceInfo.port}")
 
@@ -69,6 +70,7 @@ class NsdHelper(private val context: Context) {
                 }
 
                 try {
+                    @Suppress("DEPRECATION")
                     nsdManager.resolveService(service, resolveListener)
                 } catch (e: Exception) {
                     LogManager.e(TAG, "Failed to resolve service: ${e.message}")
