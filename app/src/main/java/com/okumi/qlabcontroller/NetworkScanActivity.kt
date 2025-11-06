@@ -69,20 +69,20 @@ class NetworkScanActivity : AppCompatActivity() {
             }
 
             override fun onServiceFound(service: NsdServiceInfo) {
-                LogManager.d(TAG, "Service discovery success: $service")
-                when {
-                    service.serviceType != SERVICE_TYPE -> {
-                        LogManager.d(TAG, "Unknown Service Type: ${service.serviceType}")
-                    }
-                    service.serviceName.contains("QLab", ignoreCase = true) -> {
-                        LogManager.d(TAG, "QLab service found: ${service.serviceName}")
+                LogManager.d(TAG, "Service found: ${service.serviceName} type: ${service.serviceType}")
+
+                // Accept all _qlab._tcp services (don't filter by name)
+                if (service.serviceType.contains("_qlab._tcp", ignoreCase = true)) {
+                    LogManager.d(TAG, "QLab service found: ${service.serviceName}")
+
+                    try {
                         nsdManager.resolveService(service, object : NsdManager.ResolveListener {
                             override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-                                LogManager.e(TAG, "Resolve failed: $errorCode")
+                                LogManager.e(TAG, "Resolve failed: ${serviceInfo.serviceName}, error: $errorCode")
                             }
 
                             override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
-                                LogManager.d(TAG, "Resolve Succeeded. $serviceInfo")
+                                LogManager.d(TAG, "Service resolved: ${serviceInfo.serviceName} at ${serviceInfo.host}:${serviceInfo.port}")
                                 val device = QLabDevice(
                                     name = serviceInfo.serviceName,
                                     host = serviceInfo.host.hostAddress ?: "",
@@ -93,10 +93,11 @@ class NetworkScanActivity : AppCompatActivity() {
                                 }
                             }
                         })
+                    } catch (e: Exception) {
+                        LogManager.e(TAG, "Failed to resolve service: ${e.message}")
                     }
-                    else -> {
-                        LogManager.d(TAG, "Not a QLab service: ${service.serviceName}")
-                    }
+                } else {
+                    LogManager.d(TAG, "Not a QLab service: ${service.serviceType}")
                 }
             }
 

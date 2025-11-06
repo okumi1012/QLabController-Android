@@ -15,12 +15,14 @@ class ConnectionActivity : AppCompatActivity() {
     private lateinit var passcodeEditText: TextInputEditText
     private lateinit var connectButton: Button
     private lateinit var settingsManager: SettingsManager
+    private lateinit var connectionManager: ConnectionManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_connection)
 
         settingsManager = SettingsManager(this)
+        connectionManager = ConnectionManager(this)
 
         initializeViews()
         loadSavedSettings()
@@ -29,14 +31,18 @@ class ConnectionActivity : AppCompatActivity() {
     }
 
     private fun handleIntentData() {
-        // Check if we received connection info from network scan
+        // Check if we received connection info from network scan or saved connection
         val ipAddress = intent.getStringExtra("IP_ADDRESS")
         val port = intent.getIntExtra("PORT", 53000)
+        val passcode = intent.getStringExtra("PASSCODE")
         val autoConnect = intent.getBooleanExtra("AUTO_CONNECT", false)
 
         if (ipAddress != null) {
             ipEditText.setText(ipAddress)
             portEditText.setText(port.toString())
+            if (passcode != null) {
+                passcodeEditText.setText(passcode)
+            }
 
             if (autoConnect) {
                 // Automatically connect
@@ -84,8 +90,18 @@ class ConnectionActivity : AppCompatActivity() {
             val success = qLabManager.connect(ipAddress, port, passcode)
 
             if (success) {
-                // Save connection settings
+                // Save connection settings to SettingsManager
                 settingsManager.saveConnectionSettings(ipAddress, port, passcode)
+
+                // Save to recent connections with workspace name
+                val workspaceName = qLabManager.getWorkspaceName()
+                val savedConnection = connectionManager.createConnection(
+                    workspaceName = workspaceName,
+                    ipAddress = ipAddress,
+                    port = port,
+                    passcode = passcode ?: ""
+                )
+                connectionManager.saveConnection(savedConnection)
 
                 // Navigate to control activity
                 val intent = Intent(this@ConnectionActivity, ControlActivity::class.java)
