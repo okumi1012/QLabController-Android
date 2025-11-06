@@ -175,7 +175,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <!-- Left Column: PREV, PANIC, NEXT -->
+        <!-- Left Column: PREV (top), PANIC (middle), NEXT (bottom) -->
         <Button
             android:id="@+id/previousButton"
             android:layout_width="0dp"
@@ -187,7 +187,7 @@
             app:layout_constraintBottom_toTopOf="@id/panicButton"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@id/pauseButton"
-            app:layout_constraintVertical_weight="1"
+            app:layout_constraintVertical_chainStyle="spread"
             android:layout_marginEnd="6dp"
             android:layout_marginBottom="6dp" />
 
@@ -196,14 +196,13 @@
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:text="@string/panic"
-            android:textSize="28sp"
+            android:textSize="24sp"
             android:textStyle="bold"
             android:backgroundTint="@color/red_panic"
             app:layout_constraintTop_toBottomOf="@id/previousButton"
             app:layout_constraintBottom_toTopOf="@id/nextButton"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toStartOf="@id/pauseButton"
-            app:layout_constraintVertical_weight="2"
             android:layout_marginEnd="6dp"
             android:layout_marginTop="6dp"
             android:layout_marginBottom="6dp" />
@@ -218,12 +217,11 @@
             app:layout_constraintTop_toBottomOf="@id/panicButton"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/pauseButton"
-            app:layout_constraintVertical_weight="1"
+            app:layout_constraintEnd_toStartOf="@id/resumeButton"
             android:layout_marginEnd="6dp"
             android:layout_marginTop="6dp" />
 
-        <!-- Middle Column: PAUSE, space, RESUME -->
+        <!-- Middle Column: PAUSE (top), empty space, RESUME (bottom) -->
         <Button
             android:id="@+id/pauseButton"
             android:layout_width="0dp"
@@ -232,10 +230,9 @@
             android:textSize="11sp"
             android:backgroundTint="@color/purple_500"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toTopOf="@id/resumeButton"
+            app:layout_constraintBottom_toTopOf="@id/panicButton"
             app:layout_constraintStart_toEndOf="@id/previousButton"
             app:layout_constraintEnd_toStartOf="@id/goButton"
-            app:layout_constraintVertical_weight="1"
             android:layout_marginStart="6dp"
             android:layout_marginEnd="6dp"
             android:layout_marginBottom="6dp" />
@@ -247,29 +244,27 @@
             android:text="▶ RESUME"
             android:textSize="11sp"
             android:backgroundTint="@color/purple_500"
-            app:layout_constraintTop_toBottomOf="@id/pauseButton"
+            app:layout_constraintTop_toBottomOf="@id/panicButton"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@id/nextButton"
             app:layout_constraintEnd_toStartOf="@id/goButton"
-            app:layout_constraintVertical_weight="1"
             android:layout_marginStart="6dp"
             android:layout_marginEnd="6dp"
             android:layout_marginTop="6dp" />
 
-        <!-- Right Column: GO (spans full height) -->
+        <!-- Right Column: GO (spans 3 rows) -->
         <Button
             android:id="@+id/goButton"
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:text="@string/go"
-            android:textSize="56sp"
+            android:textSize="42sp"
             android:textStyle="bold"
             android:backgroundTint="@color/green_go"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@id/pauseButton"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_weight="1.5"
             android:layout_marginStart="6dp" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
