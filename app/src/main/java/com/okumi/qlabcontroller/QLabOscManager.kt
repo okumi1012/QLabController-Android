@@ -20,6 +20,7 @@ class QLabOscManager private constructor() {
 
     // Real cue tracking
     private var currentCueId: String? = null
+    private var currentCueNotes: String = ""
     private var cueList = mutableListOf<CueData>()
     private var workspaceId: String? = null
     private var mainCueListId: String? = null
@@ -247,14 +248,29 @@ class QLabOscManager private constructor() {
                 LogManager.d(TAG, "Full JSON response: ${json.toString(2)}")
             }
 
-            // Check if data is a string (like playbackPosition response)
+            // Check if data is a string (like playbackPosition response or notes response)
             val dataString = json.optString("data", null)
             if (dataString != null && !json.has("data") || json.opt("data") is String) {
                 LogManager.d(TAG, "Data is a string: $dataString")
+
+                // Check if this is a notes response
+                val address = json.optString("address", "")
+                if (address.contains("/notes")) {
+                    currentCueNotes = dataString
+                    LogManager.d(TAG, "Updated current cue notes: '${currentCueNotes.take(50)}...'")
+                    return
+                }
+
                 // This might be a playback position (cue ID)
                 if (dataString.isNotEmpty() && dataString != "none") {
+                    val oldCueId = currentCueId
                     currentCueId = dataString
                     LogManager.d(TAG, "Updated current cue ID from data string: $currentCueId")
+
+                    // If cue changed, request notes for the new cue
+                    if (oldCueId != currentCueId) {
+                        requestCurrentCueNotes()
+                    }
                 }
                 return
             }
@@ -312,8 +328,12 @@ class QLabOscManager private constructor() {
                         }
                         LogManager.d(TAG, "Loaded ${cueList.size} cues from cue list")
 
-                        // After loading cues, get playback position
+                        // After loading cues, get playback position and notes
                         requestPlaybackPosition()
+                        scope.launch {
+                            delay(100)
+                            requestCurrentCueNotes()
+                        }
                     }
                     return
                 }
@@ -402,6 +422,25 @@ class QLabOscManager private constructor() {
     }
 
     /**
+     * Request notes for the current cue
+     */
+    private fun requestCurrentCueNotes() {
+        // Find the uniqueID for the current cue number
+        val currentCue = cueList.firstOrNull {
+            it.uniqueId == currentCueId || it.number == currentCueId
+        }
+
+        if (currentCue != null && currentCue.uniqueId.isNotEmpty()) {
+            val command = workspaceId?.let { "/workspace/$it/cue_id/${currentCue.uniqueId}/notes" }
+                ?: "/cue_id/${currentCue.uniqueId}/notes"
+            LogManager.d(TAG, "Requesting notes for cue ${currentCue.number}: $command")
+            sendOscMessage(command)
+        } else {
+            LogManager.w(TAG, "Cannot request notes: cue not found for ID '$currentCueId'")
+        }
+    }
+
+    /**
      * Disconnect from QLab
      */
     fun disconnect() {
@@ -421,6 +460,7 @@ class QLabOscManager private constructor() {
             isConnected = false
             cueList.clear()
             currentCueId = null
+            currentCueNotes = ""
             workspaceId = null
             mainCueListId = null
             savedPasscode = null
@@ -510,11 +550,10 @@ class QLabOscManager private constructor() {
             "${cue.number} ${cue.name}"
         } else "---"
 
-        val notes = if (currentIndex >= 0 && currentIndex < cueList.size) {
-            cueList[currentIndex].notes
-        } else ""
+        // Use currentCueNotes which is updated in real-time
+        val notes = currentCueNotes
 
-        LogManager.d(TAG, "Current cue info - Index: $currentIndex, Current: '$current', Notes: '$notes'")
+        LogManager.d(TAG, "Current cue info - Index: $currentIndex, Current: '$current', Notes length: ${notes.length}")
 
         CueInfo(previous, current, next, notes)
     }
