@@ -283,16 +283,31 @@ class QLabOscManager private constructor() {
                         cueList.clear()
                         for (i in 0 until cuesArray.length()) {
                             val cue = cuesArray.getJSONObject(i)
+
+                            // Log all available fields for first few cues to debug
+                            if (i < 3) {
+                                LogManager.d(TAG, "Cue $i fields: ${cue.keys().asSequence().toList()}")
+                            }
+
+                            // Try different field names for name and notes
+                            val cueName = cue.optString("name", "").ifEmpty {
+                                cue.optString("listName", "Untitled")
+                            }
+
+                            val cueNotes = cue.optString("notes", "").ifEmpty {
+                                cue.optString("note", "")
+                            }
+
                             val cueData = CueData(
                                 uniqueId = cue.optString("uniqueID", ""),
                                 number = cue.optString("number", ""),
-                                name = cue.optString("name", "Untitled"),
+                                name = cueName,
                                 type = cue.optString("type", ""),
-                                notes = cue.optString("notes", "")
+                                notes = cueNotes
                             )
                             cueList.add(cueData)
                             if (i < 5) {  // Log first 5 cues
-                                LogManager.d(TAG, "Cue ${cueData.number}: ${cueData.name}, type: ${cueData.type}")
+                                LogManager.d(TAG, "Cue ${cueData.number}: ${cueData.name}, type: ${cueData.type}, notes: '${cueData.notes}'")
                             }
                         }
                         LogManager.d(TAG, "Loaded ${cueList.size} cues from cue list")
