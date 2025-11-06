@@ -90,6 +90,10 @@ class QLabOscManager private constructor() {
                 delay(200)
             }
 
+            // Enable real-time updates from QLab
+            sendOscMessageWithArg("/updates", "1")
+            delay(100)
+
             // Fetch initial cue info
             requestCueLists()
             delay(300)
@@ -133,6 +137,18 @@ class QLabOscManager private constructor() {
             // Simple OSC parsing - look for JSON in the message
             val message = String(data, StandardCharsets.UTF_8)
 
+            // Extract OSC address (first null-terminated string)
+            val firstNull = message.indexOf('\u0000')
+            val address = if (firstNull > 0) message.substring(0, firstNull) else ""
+
+            Log.d(TAG, "Received OSC address: $address")
+
+            // Handle real-time update messages from QLab
+            if (address.startsWith("/update/")) {
+                handleUpdateMessage(address, message)
+                return
+            }
+
             // QLab sends JSON data in OSC messages
             val jsonStart = message.indexOf('{')
             if (jsonStart >= 0) {
@@ -152,6 +168,58 @@ class QLabOscManager private constructor() {
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error parsing OSC reply", e)
+        }
+    }
+
+    /**
+     * Handle real-time update messages from QLab
+     */
+    private fun handleUpdateMessage(address: String, fullMessage: String) {
+        try {
+            Log.d(TAG, "Update message: $address")
+
+            when {
+                // Playback position changed: /update/workspace/{id}/cueList/{cueListId}/playbackPosition {cueId}
+                address.contains("/playbackPosition") -> {
+                    // Extract cue ID from the message arguments
+                    val parts = address.split("/")
+                    // Try to find the cue ID in the message data
+                    val typeTagStart = fullMessage.indexOf(',')
+                    if (typeTagStart > 0) {
+                        // Look for string argument after type tag
+                        val afterTypeTag = fullMessage.substring(typeTagStart + 4) // Skip ",s\0\0"
+                        val cueIdEnd = afterTypeTag.indexOf('\u0000')
+                        if (cueIdEnd > 0) {
+                            currentCueId = afterTypeTag.substring(0, cueIdEnd)
+                            Log.d(TAG, "Playback position updated to cue: $currentCueId")
+                        } else {
+                            // No cue ID means playback position is cleared
+                            currentCueId = null
+                            Log.d(TAG, "Playback position cleared")
+                        }
+                    }
+                }
+
+                // Workspace updated: /update/workspace/{id}
+                address.matches(Regex("/update/workspace/[^/]+$")) -> {
+                    Log.d(TAG, "Workspace updated, reloading cue lists")
+                    requestCueLists()
+                }
+
+                // Specific cue updated: /update/workspace/{id}/cue_id/{cueId}
+                address.contains("/cue_id/") -> {
+                    Log.d(TAG, "Cue updated, may need to reload cue data")
+                    // Could reload specific cue here if needed
+                }
+
+                // Disconnect requested: /update/workspace/{id}/disconnect
+                address.endsWith("/disconnect") -> {
+                    Log.w(TAG, "QLab requested disconnect")
+                    disconnect()
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error handling update message", e)
         }
     }
 
@@ -253,6 +321,11 @@ class QLabOscManager private constructor() {
      */
     fun disconnect() {
         try {
+            // Disable updates before disconnecting
+            if (isConnected) {
+                sendOscMessageWithArg("/updates", "0")
+            }
+
             receiveJob?.cancel()
             receiveJob = null
             socket?.close()
