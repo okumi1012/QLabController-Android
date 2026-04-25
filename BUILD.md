@@ -38,6 +38,31 @@ Built APK: `app/build/outputs/apk/release/app-release.apk`
 
 If these values are missing, Gradle can still build an unsigned release variant, but it will not be ready for distribution.
 
+## GitHub Release APKs
+The GitHub Actions release workflow runs when a `v*` tag is pushed, or when it is started manually from the Actions tab.
+
+It always builds and uploads an installable debug APK:
+- `qlab-controller-debug.apk`
+
+If release signing secrets are configured, it also uploads a signed release APK:
+- `qlab-controller-release.apk`
+
+Required GitHub repository secrets for signed release APKs:
+- `QLAB_RELEASE_KEYSTORE_BASE64`
+- `QLAB_RELEASE_STORE_PASSWORD`
+- `QLAB_RELEASE_KEY_ALIAS`
+- `QLAB_RELEASE_KEY_PASSWORD`
+
+Create `QLAB_RELEASE_KEYSTORE_BASE64` from the keystore file:
+```bash
+base64 -w 0 qlab-release.jks
+```
+
+On Windows PowerShell:
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("qlab-release.jks"))
+```
+
 ## Create a New Keystore
 ```bash
 keytool -genkeypair \
