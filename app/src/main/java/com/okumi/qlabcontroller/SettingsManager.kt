@@ -11,7 +11,6 @@ class SettingsManager(context: Context) {
         private const val PREFS_NAME = "qlab_settings"
         private const val KEY_IP_ADDRESS = "ip_address"
         private const val KEY_PORT = "port"
-        private const val KEY_PASSCODE = "passcode"
         private const val KEY_THEME_MODE = "theme_mode"
         private const val KEY_LOGGING_ENABLED = "logging_enabled"
         private const val DEFAULT_PORT = 53000
@@ -30,15 +29,10 @@ class SettingsManager(context: Context) {
         get() = prefs.getInt(KEY_PORT, DEFAULT_PORT)
         set(value) = prefs.edit().putInt(KEY_PORT, value).apply()
 
-    var passcode: String?
-        get() = prefs.getString(KEY_PASSCODE, null)
-        set(value) = prefs.edit().putString(KEY_PASSCODE, value).apply()
-
-    fun saveConnectionSettings(ip: String, port: Int, passcode: String?) {
+    fun saveConnectionSettings(ip: String, port: Int) {
         prefs.edit().apply {
             putString(KEY_IP_ADDRESS, ip)
             putInt(KEY_PORT, port)
-            putString(KEY_PASSCODE, passcode)
             apply()
         }
     }

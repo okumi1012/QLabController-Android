@@ -55,7 +55,7 @@ class ConnectionActivity : AppCompatActivity() {
     private fun loadSavedSettings() {
         settingsManager.ipAddress?.let { ipEditText.setText(it) }
         portEditText.setText(settingsManager.port.toString())
-        settingsManager.passcode?.let { passcodeEditText.setText(it) }
+        passcodeEditText.text?.clear()
     }
 
     private fun setupClickListeners() {
@@ -75,6 +75,10 @@ class ConnectionActivity : AppCompatActivity() {
         }
 
         val port = portString?.toIntOrNull() ?: 53000
+        if (port !in 1..65535) {
+            Toast.makeText(this, "Port must be between 1 and 65535", Toast.LENGTH_SHORT).show()
+            return
+        }
 
         connectButton.isEnabled = false
         connectButton.text = "Connecting..."
@@ -85,7 +89,7 @@ class ConnectionActivity : AppCompatActivity() {
 
             if (success) {
                 // Save connection settings
-                settingsManager.saveConnectionSettings(ipAddress, port, passcode)
+                settingsManager.saveConnectionSettings(ipAddress, port)
 
                 // Navigate to control activity
                 val intent = Intent(this@ConnectionActivity, ControlActivity::class.java)
