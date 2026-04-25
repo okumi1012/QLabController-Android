@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView
 class NetworkScanActivity : AppCompatActivity() {
     private lateinit var nsdManager: NsdManager
     private var discoveryListener: NsdManager.DiscoveryListener? = null
+    private var isDiscovering = false
     private val discoveredDevices = mutableListOf<QLabDevice>()
     private lateinit var adapter: QLabDeviceAdapter
 
@@ -37,7 +38,6 @@ class NetworkScanActivity : AppCompatActivity() {
 
         initializeViews()
         setupRecyclerView()
-        startDiscovery()
     }
 
     private fun initializeViews() {
@@ -60,11 +60,16 @@ class NetworkScanActivity : AppCompatActivity() {
     }
 
     private fun startDiscovery() {
-        discoveryListener = object : NsdManager.DiscoveryListener {
+        if (isDiscovering) return
+
+        if (discoveryListener == null) {
+            discoveryListener = object : NsdManager.DiscoveryListener {
             override fun onDiscoveryStarted(regType: String) {
                 LogManager.d(TAG, "Service discovery started")
+                isDiscovering = true
                 runOnUiThread {
                     statusText.text = "Scanning for QLab instances..."
+                    progressBar.visibility = View.VISIBLE
                 }
             }
 
@@ -109,11 +114,17 @@ class NetworkScanActivity : AppCompatActivity() {
 
             override fun onDiscoveryStopped(serviceType: String) {
                 LogManager.d(TAG, "Discovery stopped: $serviceType")
+                isDiscovering = false
             }
 
             override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
                 LogManager.e(TAG, "Discovery failed: Error code:$errorCode")
-                nsdManager.stopServiceDiscovery(this)
+                try {
+                    nsdManager.stopServiceDiscovery(this)
+                } catch (e: Exception) {
+                    LogManager.e(TAG, "Failed to stop discovery after start failure", e)
+                }
+                isDiscovering = false
                 runOnUiThread {
                     statusText.text = "Failed to start network scan"
                     progressBar.visibility = View.GONE
@@ -122,16 +133,34 @@ class NetworkScanActivity : AppCompatActivity() {
 
             override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {
                 LogManager.e(TAG, "Discovery failed: Error code:$errorCode")
-                nsdManager.stopServiceDiscovery(this)
+                isDiscovering = false
             }
+        }
         }
 
         try {
-            nsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
+            discoveryListener?.let {
+                nsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, it)
+            }
         } catch (e: Exception) {
+            isDiscovering = false
             LogManager.e(TAG, "Failed to start discovery", e)
             statusText.text = "Failed to start network scan: ${e.message}"
             progressBar.visibility = View.GONE
+        }
+    }
+
+    private fun stopDiscovery() {
+        if (!isDiscovering) return
+
+        discoveryListener?.let {
+            try {
+                nsdManager.stopServiceDiscovery(it)
+            } catch (e: Exception) {
+                LogManager.e(TAG, "Failed to stop discovery", e)
+            } finally {
+                isDiscovering = false
+            }
         }
     }
 
@@ -180,35 +209,17 @@ class NetworkScanActivity : AppCompatActivity() {
 
     override fun onPause() {
         super.onPause()
-        discoveryListener?.let {
-            try {
-                nsdManager.stopServiceDiscovery(it)
-            } catch (e: Exception) {
-                LogManager.e(TAG, "Failed to stop discovery", e)
-            }
-        }
+        stopDiscovery()
     }
 
     override fun onResume() {
         super.onResume()
-        if (discoveryListener != null) {
-            try {
-                nsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryListener)
-            } catch (e: Exception) {
-                LogManager.e(TAG, "Failed to restart discovery", e)
-            }
-        }
+        startDiscovery()
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        discoveryListener?.let {
-            try {
-                nsdManager.stopServiceDiscovery(it)
-            } catch (e: Exception) {
-                LogManager.e(TAG, "Failed to stop discovery in onDestroy", e)
-            }
-        }
+        stopDiscovery()
     }
 }
 

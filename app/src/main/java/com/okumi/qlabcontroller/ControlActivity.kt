@@ -2,7 +2,6 @@ package com.okumi.qlabcontroller
 
 import android.content.Intent
 import android.os.Bundle
-import android.text.method.PasswordTransformationMethod
 import android.widget.Button
 import android.widget.ImageButton
 import android.widget.TextView
@@ -156,30 +155,15 @@ class ControlActivity : AppCompatActivity() {
             return
         }
 
-        // Create a custom view for the dialog
-        val dialogView = layoutInflater.inflate(android.R.layout.simple_list_item_1, null)
         val messageText = TextView(this).apply {
             text = buildString {
                 append("Workspace: ${connectionInfo.workspaceName}\n\n")
                 append("IP Address: ${connectionInfo.ipAddress}\n")
                 append("Port: ${connectionInfo.port}\n")
-                append("Passcode: ••••••••\n\n")
-                append("Tap passcode to reveal")
+                append("Passcode: ${if (connectionInfo.hasPasscode) "Provided for this session" else "Not provided"}")
             }
             setPadding(60, 40, 60, 40)
             textSize = 16f
-        }
-
-        var passcodeVisible = false
-        messageText.setOnClickListener {
-            passcodeVisible = !passcodeVisible
-            messageText.text = buildString {
-                append("Workspace: ${connectionInfo.workspaceName}\n\n")
-                append("IP Address: ${connectionInfo.ipAddress}\n")
-                append("Port: ${connectionInfo.port}\n")
-                append("Passcode: ${if (passcodeVisible) connectionInfo.passcode else "••••••••"}\n\n")
-                append("Tap passcode to ${if (passcodeVisible) "hide" else "reveal"}")
-            }
         }
 
         AlertDialog.Builder(this)

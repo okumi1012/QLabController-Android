@@ -3,6 +3,21 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+fun secret(name: String): String? {
+    return providers.gradleProperty(name).orNull ?: providers.environmentVariable(name).orNull
+}
+
+val releaseStoreFile = secret("QLAB_RELEASE_STORE_FILE")
+val releaseStorePassword = secret("QLAB_RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = secret("QLAB_RELEASE_KEY_ALIAS")
+val releaseKeyPassword = secret("QLAB_RELEASE_KEY_PASSWORD")
+val hasReleaseSigning = listOf(
+    releaseStoreFile,
+    releaseStorePassword,
+    releaseKeyAlias,
+    releaseKeyPassword
+).all { !it.isNullOrBlank() }
+
 android {
     namespace = "com.okumi.qlabcontroller"
     compileSdk = 34
@@ -16,11 +31,13 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            storeFile = file("keystore/qlab-release.jks")
-            storePassword = "android123"
-            keyAlias = "qlab-controller"
-            keyPassword = "android123"
+        if (hasReleaseSigning) {
+            create("release") {
+                storeFile = file(releaseStoreFile!!)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
         }
     }
 
@@ -28,7 +45,9 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("release")
+            if (hasReleaseSigning) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
