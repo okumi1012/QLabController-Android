@@ -2,10 +2,13 @@ package com.okumi.qlabcontroller
 
 import android.content.Context
 import android.content.Intent
+import android.net.wifi.WifiManager
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -16,7 +19,10 @@ import androidx.recyclerview.widget.RecyclerView
 class NetworkScanActivity : AppCompatActivity() {
     private lateinit var nsdManager: NsdManager
     private var discoveryListener: NsdManager.DiscoveryListener? = null
+    private var multicastLock: WifiManager.MulticastLock? = null
     private var isDiscovering = false
+    private var isResolving = false
+    private val pendingResolveServices = mutableListOf<NsdServiceInfo>()
     private val discoveredDevices = mutableListOf<QLabDevice>()
     private lateinit var adapter: QLabDeviceAdapter
 
@@ -28,14 +34,14 @@ class NetworkScanActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "NetworkScanActivity"
         private const val SERVICE_TYPE = "_qlab._tcp."
+        private const val DEFAULT_OSC_PORT = 53000
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_network_scan)
 
-        nsdManager = (getSystemService(Context.NSD_SERVICE) as NsdManager)
-
+        nsdManager = getSystemService(Context.NSD_SERVICE) as NsdManager
         initializeViews()
         setupRecyclerView()
     }
@@ -46,15 +52,11 @@ class NetworkScanActivity : AppCompatActivity() {
         emptyText = findViewById(R.id.emptyText)
         recyclerView = findViewById(R.id.devicesRecyclerView)
 
-        findViewById<Button>(R.id.cancelButton).setOnClickListener {
-            finish()
-        }
+        findViewById<Button>(R.id.cancelButton).setOnClickListener { finish() }
     }
 
     private fun setupRecyclerView() {
-        adapter = QLabDeviceAdapter(discoveredDevices) { device ->
-            onDeviceSelected(device)
-        }
+        adapter = QLabDeviceAdapter(discoveredDevices) { device -> onDeviceSelected(device) }
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
     }
@@ -62,110 +64,165 @@ class NetworkScanActivity : AppCompatActivity() {
     private fun startDiscovery() {
         if (isDiscovering) return
 
-        if (discoveryListener == null) {
-            discoveryListener = object : NsdManager.DiscoveryListener {
+        acquireMulticastLock()
+        isDiscovering = true
+        runOnUiThread {
+            statusText.text = "Scanning for QLab instances..."
+            progressBar.visibility = View.VISIBLE
+        }
+
+        val listener = discoveryListener ?: createDiscoveryListener().also {
+            discoveryListener = it
+        }
+
+        try {
+            nsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, listener)
+        } catch (e: Exception) {
+            LogManager.e(TAG, "Failed to start discovery for $SERVICE_TYPE", e)
+            isDiscovering = false
+            releaseMulticastLock()
+            runOnUiThread {
+                statusText.text = "Failed to start network scan"
+                progressBar.visibility = View.GONE
+            }
+        }
+    }
+
+    private fun createDiscoveryListener(): NsdManager.DiscoveryListener {
+        return object : NsdManager.DiscoveryListener {
             override fun onDiscoveryStarted(regType: String) {
-                LogManager.d(TAG, "Service discovery started")
-                isDiscovering = true
-                runOnUiThread {
-                    statusText.text = "Scanning for QLab instances..."
-                    progressBar.visibility = View.VISIBLE
-                }
+                LogManager.d(TAG, "Bonjour discovery started for $regType")
             }
 
             override fun onServiceFound(service: NsdServiceInfo) {
-                LogManager.d(TAG, "Service discovery success: $service")
-                when {
-                    service.serviceType != SERVICE_TYPE -> {
-                        LogManager.d(TAG, "Unknown Service Type: ${service.serviceType}")
-                    }
-                    service.serviceName.contains("QLab", ignoreCase = true) -> {
-                        LogManager.d(TAG, "QLab service found: ${service.serviceName}")
-                        nsdManager.resolveService(service, object : NsdManager.ResolveListener {
-                            override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-                                LogManager.e(TAG, "Resolve failed: $errorCode")
-                            }
-
-                            override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
-                                LogManager.d(TAG, "Resolve Succeeded. $serviceInfo")
-                                val device = QLabDevice(
-                                    name = serviceInfo.serviceName,
-                                    host = serviceInfo.host.hostAddress ?: "",
-                                    port = serviceInfo.port
-                                )
-                                runOnUiThread {
-                                    addDevice(device)
-                                }
-                            }
-                        })
-                    }
-                    else -> {
-                        LogManager.d(TAG, "Not a QLab service: ${service.serviceName}")
-                    }
-                }
+                if (service.serviceType != SERVICE_TYPE) return
+                LogManager.d(TAG, "QLab Bonjour service found: $service")
+                queueResolve(service)
             }
 
             override fun onServiceLost(service: NsdServiceInfo) {
                 LogManager.d(TAG, "Service lost: $service")
-                runOnUiThread {
-                    removeDevice(service.serviceName)
-                }
+                runOnUiThread { removeDevice(service.serviceName) }
             }
 
-            override fun onDiscoveryStopped(serviceType: String) {
-                LogManager.d(TAG, "Discovery stopped: $serviceType")
+            override fun onDiscoveryStopped(stoppedServiceType: String) {
+                LogManager.d(TAG, "Discovery stopped: $stoppedServiceType")
                 isDiscovering = false
+                runOnUiThread { progressBar.visibility = View.GONE }
+                releaseMulticastLock()
             }
 
-            override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
-                LogManager.e(TAG, "Discovery failed: Error code:$errorCode")
+            override fun onStartDiscoveryFailed(failedServiceType: String, errorCode: Int) {
+                LogManager.e(TAG, "Discovery start failed ($failedServiceType): $errorCode")
                 try {
                     nsdManager.stopServiceDiscovery(this)
                 } catch (e: Exception) {
                     LogManager.e(TAG, "Failed to stop discovery after start failure", e)
                 }
                 isDiscovering = false
+                releaseMulticastLock()
                 runOnUiThread {
                     statusText.text = "Failed to start network scan"
                     progressBar.visibility = View.GONE
                 }
             }
 
-            override fun onStopDiscoveryFailed(serviceType: String, errorCode: Int) {
-                LogManager.e(TAG, "Discovery failed: Error code:$errorCode")
+            override fun onStopDiscoveryFailed(failedServiceType: String, errorCode: Int) {
+                LogManager.e(TAG, "Discovery stop failed ($failedServiceType): $errorCode")
                 isDiscovering = false
+                releaseMulticastLock()
+                runOnUiThread { progressBar.visibility = View.GONE }
             }
         }
-        }
+    }
+
+    private fun acquireMulticastLock() {
+        if (multicastLock?.isHeld == true) return
 
         try {
-            discoveryListener?.let {
-                nsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, it)
+            val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+            multicastLock = wifiManager.createMulticastLock("qlab-controller-mdns").apply {
+                setReferenceCounted(false)
+                acquire()
             }
         } catch (e: Exception) {
-            isDiscovering = false
-            LogManager.e(TAG, "Failed to start discovery", e)
-            statusText.text = "Failed to start network scan: ${e.message}"
-            progressBar.visibility = View.GONE
+            LogManager.e(TAG, "Failed to acquire multicast lock", e)
+        }
+    }
+
+    private fun releaseMulticastLock() {
+        try {
+            if (multicastLock?.isHeld == true) {
+                multicastLock?.release()
+            }
+        } catch (e: Exception) {
+            LogManager.e(TAG, "Failed to release multicast lock", e)
+        }
+        multicastLock = null
+    }
+
+    private fun queueResolve(service: NsdServiceInfo) {
+        val isQueued = pendingResolveServices.any {
+            it.serviceName == service.serviceName && it.serviceType == service.serviceType
+        }
+        if (!isQueued) {
+            pendingResolveServices.add(service)
+        }
+        resolveNextService()
+    }
+
+    private fun resolveNextService() {
+        if (isResolving || pendingResolveServices.isEmpty()) return
+
+        val service = pendingResolveServices.removeAt(0)
+        isResolving = true
+        try {
+            nsdManager.resolveService(service, object : NsdManager.ResolveListener {
+                override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
+                    LogManager.e(TAG, "Resolve failed for ${serviceInfo.serviceName}: $errorCode")
+                    isResolving = false
+                    if (isDiscovering) resolveNextService()
+                }
+
+                override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
+                    isResolving = false
+                    val hostAddress = serviceInfo.host?.hostAddress.orEmpty()
+                    if (hostAddress.isNotEmpty()) {
+                        val device = QLabDevice(
+                            name = serviceInfo.serviceName,
+                            host = hostAddress,
+                            port = if (serviceInfo.port > 0) serviceInfo.port else DEFAULT_OSC_PORT
+                        )
+                        runOnUiThread { addDevice(device) }
+                    }
+                    if (isDiscovering) resolveNextService()
+                }
+            })
+        } catch (e: Exception) {
+            LogManager.e(TAG, "Failed to resolve ${service.serviceName}", e)
+            isResolving = false
+            if (isDiscovering) resolveNextService()
         }
     }
 
     private fun stopDiscovery() {
         if (!isDiscovering) return
 
-        discoveryListener?.let {
+        discoveryListener?.let { listener ->
             try {
-                nsdManager.stopServiceDiscovery(it)
+                nsdManager.stopServiceDiscovery(listener)
             } catch (e: Exception) {
                 LogManager.e(TAG, "Failed to stop discovery", e)
-            } finally {
-                isDiscovering = false
             }
         }
+        pendingResolveServices.clear()
+        isResolving = false
+        isDiscovering = false
+        progressBar.visibility = View.GONE
+        releaseMulticastLock()
     }
 
     private fun addDevice(device: QLabDevice) {
-        // Check if device already exists
         val existingIndex = discoveredDevices.indexOfFirst { it.host == device.host && it.port == device.port }
         if (existingIndex >= 0) {
             discoveredDevices[existingIndex] = device
@@ -174,7 +231,6 @@ class NetworkScanActivity : AppCompatActivity() {
             discoveredDevices.add(device)
             adapter.notifyItemInserted(discoveredDevices.size - 1)
         }
-
         updateEmptyState()
     }
 
@@ -198,7 +254,6 @@ class NetworkScanActivity : AppCompatActivity() {
     }
 
     private fun onDeviceSelected(device: QLabDevice) {
-        // Navigate to connection screen with pre-filled information
         val intent = Intent(this, ConnectionActivity::class.java)
         intent.putExtra("IP_ADDRESS", device.host)
         intent.putExtra("PORT", device.port)
@@ -223,14 +278,12 @@ class NetworkScanActivity : AppCompatActivity() {
     }
 }
 
-// Data class for QLab device
 data class QLabDevice(
     val name: String,
     val host: String,
     val port: Int
 )
 
-// RecyclerView Adapter
 class QLabDeviceAdapter(
     private val devices: List<QLabDevice>,
     private val onDeviceClick: (QLabDevice) -> Unit
@@ -241,9 +294,8 @@ class QLabDeviceAdapter(
         val addressText: TextView = view.findViewById(R.id.deviceAddressText)
     }
 
-    override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int): ViewHolder {
-        val view = android.view.LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_qlab_device, parent, false)
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_qlab_device, parent, false)
         return ViewHolder(view)
     }
 
@@ -251,9 +303,7 @@ class QLabDeviceAdapter(
         val device = devices[position]
         holder.nameText.text = device.name
         holder.addressText.text = "${device.host}:${device.port}"
-        holder.itemView.setOnClickListener {
-            onDeviceClick(device)
-        }
+        holder.itemView.setOnClickListener { onDeviceClick(device) }
     }
 
     override fun getItemCount() = devices.size

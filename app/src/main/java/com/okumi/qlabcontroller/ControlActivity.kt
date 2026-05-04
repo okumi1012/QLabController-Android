@@ -10,6 +10,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 class ControlActivity : AppCompatActivity() {
@@ -29,6 +30,7 @@ class ControlActivity : AppCompatActivity() {
     private lateinit var nextButton: Button
     private lateinit var panicButton: Button
     private lateinit var disconnectButton: Button
+    private var cueRefreshJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -123,23 +125,56 @@ class ControlActivity : AppCompatActivity() {
 
     private fun sendPreviousCommand() {
         lifecycleScope.launch {
-            qLabManager.sendPrevious()
-            updateCueInfo()
+            setNavigationButtonsEnabled(false)
+            try {
+                qLabManager.sendPrevious()
+                scheduleFastCueRefresh()
+            } catch (e: Exception) {
+                setNavigationButtonsEnabled(true)
+            }
         }
     }
 
     private fun sendGoCommand() {
         lifecycleScope.launch {
-            qLabManager.sendGo()
-            updateCueInfo()
+            setNavigationButtonsEnabled(false)
+            try {
+                qLabManager.sendGo()
+                scheduleFastCueRefresh()
+            } catch (e: Exception) {
+                setNavigationButtonsEnabled(true)
+            }
         }
     }
 
     private fun sendNextCommand() {
         lifecycleScope.launch {
-            qLabManager.sendNext()
-            updateCueInfo()
+            setNavigationButtonsEnabled(false)
+            try {
+                qLabManager.sendNext()
+                scheduleFastCueRefresh()
+            } catch (e: Exception) {
+                setNavigationButtonsEnabled(true)
+            }
         }
+    }
+
+    private fun scheduleFastCueRefresh() {
+        cueRefreshJob?.cancel()
+        cueRefreshJob = lifecycleScope.launch {
+            try {
+                delay(80)
+                updateCueInfo()
+            } finally {
+                setNavigationButtonsEnabled(true)
+            }
+        }
+    }
+
+    private fun setNavigationButtonsEnabled(enabled: Boolean) {
+        previousButton.isEnabled = enabled
+        goButton.isEnabled = enabled
+        nextButton.isEnabled = enabled
     }
 
     private fun sendPanicCommand() {
@@ -193,6 +228,7 @@ class ControlActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        cueRefreshJob?.cancel()
         if (!isChangingConfigurations) {
             qLabManager.disconnect()
         }
