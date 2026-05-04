@@ -2,9 +2,10 @@ package com.okumi.qlabcontroller
 
 import android.content.Context
 import android.content.Intent
-import android.net.wifi.WifiManager
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import android.net.wifi.WifiManager
+import android.os.Build
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -13,8 +14,23 @@ import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import org.json.JSONObject
+import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.Inet4Address
+import java.net.InetAddress
+import java.net.NetworkInterface
+import java.net.SocketTimeoutException
+import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
 
 class NetworkScanActivity : AppCompatActivity() {
     private lateinit var nsdManager: NsdManager
@@ -22,6 +38,7 @@ class NetworkScanActivity : AppCompatActivity() {
     private var multicastLock: WifiManager.MulticastLock? = null
     private var isDiscovering = false
     private var isResolving = false
+    private var subnetScanJob: Job? = null
     private val pendingResolveServices = mutableListOf<NsdServiceInfo>()
     private val discoveredDevices = mutableListOf<QLabDevice>()
     private lateinit var adapter: QLabDeviceAdapter
@@ -30,11 +47,13 @@ class NetworkScanActivity : AppCompatActivity() {
     private lateinit var statusText: TextView
     private lateinit var emptyText: TextView
     private lateinit var recyclerView: RecyclerView
+    private lateinit var manualButton: Button
 
     companion object {
         private const val TAG = "NetworkScanActivity"
         private const val SERVICE_TYPE = "_qlab._tcp."
         private const val DEFAULT_OSC_PORT = 53000
+        private const val OSC_SCAN_TIMEOUT_MS = 2_800L
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,8 +70,13 @@ class NetworkScanActivity : AppCompatActivity() {
         statusText = findViewById(R.id.statusText)
         emptyText = findViewById(R.id.emptyText)
         recyclerView = findViewById(R.id.devicesRecyclerView)
+        manualButton = findViewById(R.id.manualButton)
 
         findViewById<Button>(R.id.cancelButton).setOnClickListener { finish() }
+        manualButton.setOnClickListener {
+            startActivity(Intent(this, ConnectionActivity::class.java))
+            finish()
+        }
     }
 
     private fun setupRecyclerView() {
@@ -67,8 +91,9 @@ class NetworkScanActivity : AppCompatActivity() {
         acquireMulticastLock()
         isDiscovering = true
         runOnUiThread {
-            statusText.text = "Scanning for QLab instances..."
+            statusText.text = "Searching with Bonjour and OSC fallback..."
             progressBar.visibility = View.VISIBLE
+            updateEmptyState()
         }
 
         val listener = discoveryListener ?: createDiscoveryListener().also {
@@ -82,10 +107,12 @@ class NetworkScanActivity : AppCompatActivity() {
             isDiscovering = false
             releaseMulticastLock()
             runOnUiThread {
-                statusText.text = "Failed to start network scan"
+                statusText.text = "Bonjour scan failed. Try manual IP connection."
                 progressBar.visibility = View.GONE
             }
         }
+
+        startOscSubnetScan()
     }
 
     private fun createDiscoveryListener(): NsdManager.DiscoveryListener {
@@ -95,7 +122,10 @@ class NetworkScanActivity : AppCompatActivity() {
             }
 
             override fun onServiceFound(service: NsdServiceInfo) {
-                if (service.serviceType != SERVICE_TYPE) return
+                if (!isQlabService(service.serviceType)) {
+                    LogManager.d(TAG, "Ignoring non-QLab service: ${service.serviceType}")
+                    return
+                }
                 LogManager.d(TAG, "QLab Bonjour service found: $service")
                 queueResolve(service)
             }
@@ -186,12 +216,13 @@ class NetworkScanActivity : AppCompatActivity() {
 
                 override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
                     isResolving = false
-                    val hostAddress = serviceInfo.host?.hostAddress.orEmpty()
+                    val hostAddress = getResolvedHostAddress(serviceInfo)
                     if (hostAddress.isNotEmpty()) {
                         val device = QLabDevice(
-                            name = serviceInfo.serviceName,
+                            name = serviceInfo.serviceName.ifBlank { "QLab Workspace" },
                             host = hostAddress,
-                            port = if (serviceInfo.port > 0) serviceInfo.port else DEFAULT_OSC_PORT
+                            port = DEFAULT_OSC_PORT,
+                            source = "Bonjour"
                         )
                         runOnUiThread { addDevice(device) }
                     }
@@ -205,8 +236,163 @@ class NetworkScanActivity : AppCompatActivity() {
         }
     }
 
+    private fun isQlabService(serviceType: String): Boolean {
+        val normalizedType = serviceType
+            .lowercase()
+            .removeSuffix(".")
+            .removeSuffix(".local")
+            .removeSuffix(".")
+        return normalizedType == "_qlab._tcp" || normalizedType.endsWith("._sub._qlab._tcp")
+    }
+
+    private fun getResolvedHostAddress(serviceInfo: NsdServiceInfo): String {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            serviceInfo.hostAddresses.firstOrNull()?.hostAddress.orEmpty()
+        } else {
+            @Suppress("DEPRECATION")
+            val host = serviceInfo.host
+            host?.hostAddress.orEmpty()
+        }
+    }
+
+    private fun startOscSubnetScan() {
+        if (subnetScanJob?.isActive == true) return
+
+        subnetScanJob = lifecycleScope.launch(Dispatchers.IO) {
+            val hosts = try {
+                localSubnetHosts()
+            } catch (e: Exception) {
+                LogManager.e(TAG, "Failed to read local network interfaces", e)
+                emptyList()
+            }
+            if (hosts.isEmpty()) {
+                LogManager.w(TAG, "No local IPv4 subnet found for OSC fallback scan")
+                runOnUiThread {
+                    progressBar.visibility = View.GONE
+                    statusText.text = "No local Wi-Fi subnet found. Enter the QLab Mac IP manually."
+                    updateEmptyState()
+                }
+                return@launch
+            }
+
+            try {
+                DatagramSocket().use { scanSocket ->
+                    scanSocket.soTimeout = 250
+                    val replyPort = scanSocket.localPort
+                    val replyPortPacket = buildOscMessage("/udpReplyPort", "i", ByteBuffer.allocate(4).putInt(replyPort).array())
+                    val workspacePacket = buildOscMessage("/workspaces", "", ByteArray(0))
+
+                    hosts.forEach { host ->
+                        if (!isActive) return@forEach
+                        val address = InetAddress.getByName(host)
+                        scanSocket.send(DatagramPacket(replyPortPacket, replyPortPacket.size, address, DEFAULT_OSC_PORT))
+                        scanSocket.send(DatagramPacket(workspacePacket, workspacePacket.size, address, DEFAULT_OSC_PORT))
+                    }
+
+                    val deadline = System.currentTimeMillis() + OSC_SCAN_TIMEOUT_MS
+                    val buffer = ByteArray(8192)
+                    while (isActive && System.currentTimeMillis() < deadline) {
+                        try {
+                            val packet = DatagramPacket(buffer, buffer.size)
+                            scanSocket.receive(packet)
+                            parseWorkspaceReply(packet.data, packet.length)?.let { workspaceName ->
+                                val device = QLabDevice(
+                                    name = workspaceName,
+                                    host = packet.address.hostAddress.orEmpty(),
+                                    port = DEFAULT_OSC_PORT,
+                                    source = "OSC scan"
+                                )
+                                runOnUiThread { addDevice(device) }
+                            }
+                        } catch (_: SocketTimeoutException) {
+                            // Keep listening until the overall scan deadline.
+                        }
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                LogManager.e(TAG, "OSC fallback scan failed", e)
+            } finally {
+                if (isDiscovering) {
+                    runOnUiThread {
+                        progressBar.visibility = View.GONE
+                        statusText.text = if (discoveredDevices.isEmpty()) {
+                            "No QLab instance found automatically. Enter the IP address manually."
+                        } else {
+                            "Select a workspace, then confirm port and passcode."
+                        }
+                        updateEmptyState()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun localSubnetHosts(): List<String> {
+        val localAddresses = mutableListOf<String>()
+        val interfaces = NetworkInterface.getNetworkInterfaces()
+        while (interfaces.hasMoreElements()) {
+            val networkInterface = interfaces.nextElement()
+            if (!networkInterface.isUp || networkInterface.isLoopback) continue
+
+            val addresses = networkInterface.inetAddresses
+            while (addresses.hasMoreElements()) {
+                val address = addresses.nextElement()
+                if (address is Inet4Address && address.isSiteLocalAddress) {
+                    localAddresses.add(address.hostAddress)
+                }
+            }
+        }
+
+        return localAddresses.flatMap { localAddress ->
+            val parts = localAddress.split('.')
+            if (parts.size != 4) return@flatMap emptyList<String>()
+            val prefix = "${parts[0]}.${parts[1]}.${parts[2]}"
+            (1..254).map { "$prefix.$it" }.filterNot { it == localAddress }
+        }.distinct()
+    }
+
+    private fun parseWorkspaceReply(data: ByteArray, length: Int): String? {
+        val message = String(data, 0, length, StandardCharsets.UTF_8)
+        val jsonStart = message.indexOf('{')
+        val jsonEnd = message.lastIndexOf('}')
+        if (jsonStart < 0 || jsonEnd <= jsonStart) return null
+
+        return try {
+            val json = JSONObject(message.substring(jsonStart, jsonEnd + 1))
+            val firstWorkspace = json.optJSONArray("data")?.optJSONObject(0) ?: return null
+            firstWorkspace.optString("displayName", "QLab Workspace").ifBlank { "QLab Workspace" }
+        } catch (e: Exception) {
+            LogManager.e(TAG, "Failed to parse OSC scan reply", e)
+            null
+        }
+    }
+
+    private fun buildOscMessage(address: String, typeTags: String, payload: ByteArray): ByteArray {
+        val addressBytes = paddedOscBytes(address)
+        val typeTagBytes = paddedOscBytes(",$typeTags")
+        return ByteBuffer.allocate(addressBytes.size + typeTagBytes.size + payload.size).apply {
+            put(addressBytes)
+            put(typeTagBytes)
+            put(payload)
+        }.array()
+    }
+
+    private fun paddedOscBytes(value: String): ByteArray {
+        val rawBytes = value.toByteArray(StandardCharsets.UTF_8)
+        val paddedSize = ((rawBytes.size + 1 + 3) / 4) * 4
+        return ByteBuffer.allocate(paddedSize).apply { put(rawBytes) }.array()
+    }
+
     private fun stopDiscovery() {
-        if (!isDiscovering) return
+        subnetScanJob?.cancel()
+        subnetScanJob = null
+        if (!isDiscovering) {
+            progressBar.visibility = View.GONE
+            releaseMulticastLock()
+            return
+        }
 
         discoveryListener?.let { listener ->
             try {
@@ -257,7 +443,8 @@ class NetworkScanActivity : AppCompatActivity() {
         val intent = Intent(this, ConnectionActivity::class.java)
         intent.putExtra("IP_ADDRESS", device.host)
         intent.putExtra("PORT", device.port)
-        intent.putExtra("AUTO_CONNECT", true)
+        intent.putExtra("DEVICE_NAME", device.name)
+        intent.putExtra("DEVICE_SOURCE", device.source)
         startActivity(intent)
         finish()
     }
@@ -281,7 +468,8 @@ class NetworkScanActivity : AppCompatActivity() {
 data class QLabDevice(
     val name: String,
     val host: String,
-    val port: Int
+    val port: Int,
+    val source: String
 )
 
 class QLabDeviceAdapter(
@@ -302,7 +490,7 @@ class QLabDeviceAdapter(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val device = devices[position]
         holder.nameText.text = device.name
-        holder.addressText.text = "${device.host}:${device.port}"
+        holder.addressText.text = "${device.host}:${device.port} - ${device.source}"
         holder.itemView.setOnClickListener { onDeviceClick(device) }
     }
 

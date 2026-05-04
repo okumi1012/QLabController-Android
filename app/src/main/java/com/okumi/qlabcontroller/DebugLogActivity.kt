@@ -57,11 +57,11 @@ class DebugLogActivity : AppCompatActivity() {
 
             // Color code based on log level
             val color = when (log.level) {
-                "E" -> Color.RED
+                "E" -> getColor(R.color.red_panic)
                 "W" -> Color.rgb(255, 140, 0) // Orange
-                "I" -> Color.BLUE
-                "D" -> Color.DKGRAY
-                else -> Color.BLACK
+                "I" -> getColor(R.color.accent_blue)
+                "D" -> getColor(R.color.text_secondary)
+                else -> getColor(R.color.text_primary)
             }
 
             builder.setSpan(

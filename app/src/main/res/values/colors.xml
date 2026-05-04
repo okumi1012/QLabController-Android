@@ -1,25 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Light theme colors -->
+    <!-- Legacy Material color names kept for compatibility -->
     <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="purple_700">#FF3700B3</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
+    <color name="purple_500">#FF2563EB</color>
+    <color name="purple_700">#FF1D4ED8</color>
+    <color name="teal_200">#FFD1FAE5</color>
+    <color name="teal_700">#FF047857</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="green_go">#FF4CAF50</color>
-    <color name="red_panic">#FFF44336</color>
+    <color name="green_go">#FF16A34A</color>
+    <color name="red_panic">#FFDC2626</color>
+
+    <color name="screen_background">#FFF8FAFC</color>
+    <color name="surface">#FFFFFFFF</color>
+    <color name="surface_muted">#FFEFF4F8</color>
+    <color name="surface_warning">#FFFFF7ED</color>
+    <color name="border_subtle">#FFD8DEE7</color>
+    <color name="text_primary">#FF111827</color>
+    <color name="text_secondary">#FF4B5563</color>
+    <color name="accent_blue">#FF2563EB</color>
+    <color name="accent_blue_dark">#FF1D4ED8</color>
+    <color name="button_neutral">#FF475569</color>
 
     <!-- Light mode specific -->
-    <color name="background_light">#FFFFFFFF</color>
-    <color name="surface_light">#FFF5F5F5</color>
-    <color name="text_primary_light">#FF000000</color>
-    <color name="text_secondary_light">#FF757575</color>
+    <color name="background_light">#FFF8FAFC</color>
+    <color name="surface_light">#FFFFFFFF</color>
+    <color name="text_primary_light">#FF111827</color>
+    <color name="text_secondary_light">#FF4B5563</color>
 
     <!-- Dark mode fallback colors (will be overridden by values-night) -->
-    <color name="background_dark">#FFFFFFFF</color>
-    <color name="surface_dark">#FFF5F5F5</color>
-    <color name="text_primary_dark">#FF000000</color>
-    <color name="text_secondary_dark">#FF757575</color>
+    <color name="background_dark">#FF101418</color>
+    <color name="surface_dark">#FF18202A</color>
+    <color name="text_primary_dark">#FFF8FAFC</color>
+    <color name="text_secondary_dark">#FFC7D0DC</color>
 </resources>

@@ -1,19 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Dark theme colors -->
+    <!-- Legacy Material color names kept for compatibility -->
     <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="purple_700">#FF3700B3</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
+    <color name="purple_500">#FF60A5FA</color>
+    <color name="purple_700">#FF2563EB</color>
+    <color name="teal_200">#FF134E4A</color>
+    <color name="teal_700">#FF5EEAD4</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="green_go">#FF4CAF50</color>
-    <color name="red_panic">#FFF44336</color>
+    <color name="green_go">#FF22C55E</color>
+    <color name="red_panic">#FFEF4444</color>
+
+    <color name="screen_background">#FF101418</color>
+    <color name="surface">#FF18202A</color>
+    <color name="surface_muted">#FF253142</color>
+    <color name="surface_warning">#FF2B2116</color>
+    <color name="border_subtle">#FF334155</color>
+    <color name="text_primary">#FFF8FAFC</color>
+    <color name="text_secondary">#FFC7D0DC</color>
+    <color name="accent_blue">#FF60A5FA</color>
+    <color name="accent_blue_dark">#FF3B82F6</color>
+    <color name="button_neutral">#FF64748B</color>
 
     <!-- Dark mode specific -->
-    <color name="background_dark">#FF121212</color>
-    <color name="surface_dark">#FF1E1E1E</color>
-    <color name="text_primary_dark">#FFFFFFFF</color>
-    <color name="text_secondary_dark">#FFB0B0B0</color>
+    <color name="background_dark">#FF101418</color>
+    <color name="surface_dark">#FF18202A</color>
+    <color name="text_primary_dark">#FFF8FAFC</color>
+    <color name="text_secondary_dark">#FFC7D0DC</color>
 </resources>
