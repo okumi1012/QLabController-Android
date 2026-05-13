@@ -43,14 +43,12 @@
         <!-- Mock Operator Control HUD -->
         <activity
             android:name=".OperatorControlActivity"
-            android:exported="false"
-            android:screenOrientation="portrait" />
+            android:exported="false" />
 
         <!-- Passive monitoring HUD with no trigger controls -->
         <activity
             android:name=".PassiveHudActivity"
-            android:exported="false"
-            android:screenOrientation="portrait" />
+            android:exported="false" />
 
         <!-- Debug Log Activity - View debug logs -->
         <activity

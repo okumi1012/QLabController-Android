@@ -3,6 +3,7 @@ package com.okumi.qlabcontroller
 import android.content.Context
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.text.TextUtils
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -28,6 +29,7 @@ object ShowHudUi {
                 normalized.contains("attention") -> R.color.show_prepare
             normalized.contains("error") || normalized.contains("failed") ||
                 normalized.contains("danger") -> R.color.show_danger
+            normalized.contains("disconnect") || normalized.contains("offline") -> R.color.show_disconnected
             else -> R.color.show_info
         }
     }
@@ -36,6 +38,8 @@ object ShowHudUi {
         textView.text = risk.ifBlank { "low" }.uppercase()
         textView.setTextColor(textView.context.getColor(R.color.show_bg))
         textView.setTypeface(Typeface.DEFAULT, Typeface.BOLD)
+        textView.maxLines = 1
+        textView.ellipsize = TextUtils.TruncateAt.END
         textView.background = roundedFill(textView.context, riskColor(risk), 12f)
         textView.setPadding(textView.context.dp(10), textView.context.dp(4), textView.context.dp(10), textView.context.dp(4))
     }
@@ -44,6 +48,8 @@ object ShowHudUi {
         textView.text = status.ifBlank { "unknown" }.uppercase()
         textView.setTextColor(textView.context.getColor(R.color.show_bg))
         textView.setTypeface(Typeface.DEFAULT, Typeface.BOLD)
+        textView.maxLines = 1
+        textView.ellipsize = TextUtils.TruncateAt.END
         textView.background = roundedFill(textView.context, statusColor(status), 12f)
         textView.setPadding(textView.context.dp(10), textView.context.dp(4), textView.context.dp(10), textView.context.dp(4))
     }
@@ -70,28 +76,32 @@ object ShowHudUi {
         val row = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             background = roundedStroke(context, colorRes, R.color.show_border, 8f)
-            setPadding(context.dp(12), context.dp(10), context.dp(12), context.dp(10))
+            setPadding(context.dp(9), context.dp(7), context.dp(9), context.dp(7))
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
             ).apply {
-                bottomMargin = context.dp(8)
+                bottomMargin = context.dp(6)
             }
         }
 
         row.addView(TextView(context).apply {
             text = title
             setTextColor(context.getColor(R.color.show_text))
-            textSize = 14f
+            textSize = 12f
             setTypeface(Typeface.DEFAULT, Typeface.BOLD)
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
         })
 
         if (body.isNotBlank()) {
             row.addView(TextView(context).apply {
                 text = body
                 setTextColor(context.getColor(R.color.show_muted))
-                textSize = 13f
-                setPadding(0, context.dp(3), 0, 0)
+                textSize = 11f
+                maxLines = 2
+                ellipsize = TextUtils.TruncateAt.END
+                setPadding(0, context.dp(2), 0, 0)
             })
         }
         return row

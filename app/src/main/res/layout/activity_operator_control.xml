@@ -12,7 +12,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="14dp">
+        android:padding="12dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -42,9 +42,11 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:maxLines="1"
                     android:textColor="@color/show_muted"
-                    android:textSize="15sp"
-                    tools:text="Scene 3" />
+                    android:textSize="14sp"
+                    tools:text="Scene 3 / Solo operator" />
             </LinearLayout>
 
             <TextView
@@ -68,424 +70,80 @@
                 android:id="@+id/modeText"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="6dp"
+                android:layout_marginEnd="5dp"
                 android:layout_weight="1"
                 android:gravity="center"
-                android:textColor="@color/show_bg"
-                android:textSize="13sp"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/connectionStatusText"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="6dp"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:textColor="@color/show_bg"
-                android:textSize="13sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/syncWarningCard"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            app:cardBackgroundColor="@color/show_panel_alt"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="0dp"
-            app:strokeColor="@color/show_prepare"
-            app:strokeWidth="2dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="12dp">
-
-                <TextView
-                    android:id="@+id/syncStatusText"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/show_bg"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/syncWarningText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:textColor="@color/show_text"
-                    android:textSize="15sp"
-                    tools:text="QLab and MA2 next cues must fire together." />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:orientation="horizontal">
-
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/qlabCueCard"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_marginStart="5dp"
                 android:layout_marginEnd="5dp"
                 android:layout_weight="1"
-                app:cardBackgroundColor="@color/show_panel"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/show_border"
-                app:strokeWidth="1dp">
+                android:gravity="center"
+                android:textSize="12sp"
+                android:textStyle="bold" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="12dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="QLAB"
-                        android:textColor="@color/show_info"
-                        android:textSize="13sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/qlabCurrentNumberText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textColor="@color/show_text"
-                        android:textSize="38sp"
-                        android:textStyle="bold"
-                        tools:text="12" />
-
-                    <TextView
-                        android:id="@+id/qlabCurrentNameText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:ellipsize="end"
-                        android:maxLines="2"
-                        android:textColor="@color/show_text"
-                        android:textSize="17sp"
-                        android:textStyle="bold"
-                        tools:text="Door knock SFX" />
-
-                    <TextView
-                        android:id="@+id/qlabCurrentMetaText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:textColor="@color/show_muted"
-                        android:textSize="13sp"
-                        tools:text="audio / running / 4.2s" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
-                        android:text="NEXT QLAB"
-                        android:textColor="@color/show_prepare"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/qlabNextNumberText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textColor="@color/show_prepare"
-                        android:textSize="30sp"
-                        android:textStyle="bold"
-                        tools:text="13" />
-
-                    <TextView
-                        android:id="@+id/qlabNextNameText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:ellipsize="end"
-                        android:maxLines="2"
-                        android:textColor="@color/show_text"
-                        android:textSize="16sp"
-                        tools:text="Blackout transition" />
-
-                    <TextView
-                        android:id="@+id/qlabNextMetaText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:textColor="@color/show_muted"
-                        android:textSize="13sp"
-                        tools:text="group" />
-
-                    <TextView
-                        android:id="@+id/qlabNextRiskText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/ma2CueCard"
+            <TextView
+                android:id="@+id/syncStatusText"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="5dp"
                 android:layout_weight="1"
-                app:cardBackgroundColor="@color/show_panel"
-                app:cardCornerRadius="8dp"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/show_border"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="12dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="grandMA2"
-                        android:textColor="@color/show_info"
-                        android:textSize="13sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/ma2CurrentNumberText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textColor="@color/show_text"
-                        android:textSize="38sp"
-                        android:textStyle="bold"
-                        tools:text="23" />
-
-                    <TextView
-                        android:id="@+id/ma2CurrentNameText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:ellipsize="end"
-                        android:maxLines="2"
-                        android:textColor="@color/show_text"
-                        android:textSize="17sp"
-                        android:textStyle="bold"
-                        tools:text="Interior warm wash" />
-
-                    <TextView
-                        android:id="@+id/ma2CurrentMetaText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:textColor="@color/show_muted"
-                        android:textSize="13sp"
-                        tools:text="Main sequence" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
-                        android:text="NEXT MA2"
-                        android:textColor="@color/show_prepare"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/ma2NextNumberText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:textColor="@color/show_prepare"
-                        android:textSize="30sp"
-                        android:textStyle="bold"
-                        tools:text="24" />
-
-                    <TextView
-                        android:id="@+id/ma2NextNameText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:ellipsize="end"
-                        android:maxLines="2"
-                        android:textColor="@color/show_text"
-                        android:textSize="16sp"
-                        tools:text="Snap blackout" />
-
-                    <TextView
-                        android:id="@+id/ma2NextMetaText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:textColor="@color/show_muted"
-                        android:textSize="13sp"
-                        tools:text="Main sequence" />
-
-                    <TextView
-                        android:id="@+id/ma2NextRiskText"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                android:gravity="center"
+                android:textSize="12sp"
+                android:textStyle="bold" />
         </LinearLayout>
 
-        <com.google.android.material.card.MaterialCardView
+        <include
+            layout="@layout/component_sync_warning_panel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            app:cardBackgroundColor="@color/show_panel"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="0dp"
-            app:strokeColor="@color/show_border"
-            app:strokeWidth="1dp">
+            android:layout_marginTop="10dp" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="12dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="CURRENT MEMO"
-                    android:textColor="@color/show_muted"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/currentMemoText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="5dp"
-                    android:textColor="@color/show_text"
-                    android:textSize="17sp"
-                    tools:text="Wait for actor to fully turn before GO." />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    android:text="NEXT MEMO - PREPARE"
-                    android:textColor="@color/show_prepare"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/nextMemoText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="5dp"
-                    android:background="@color/show_panel_alt"
-                    android:padding="12dp"
-                    android:textColor="@color/show_text"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    tools:text="Prepare for fast transition. Confirm actor exits SR." />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <Button
-            android:id="@+id/goButton"
+        <include
+            layout="@layout/component_qlab_cue_pair_panel"
             android:layout_width="match_parent"
-            android:layout_height="112dp"
-            android:layout_marginTop="12dp"
-            android:backgroundTint="@color/show_go"
-            android:text="MOCK GO"
-            android:textColor="@color/show_text"
-            android:textSize="42sp"
-            android:textStyle="bold" />
+            android:layout_height="300dp"
+            android:layout_marginTop="10dp" />
 
-        <TextView
-            android:id="@+id/operatorActionText"
+        <include
+            layout="@layout/component_ma2_cue_pair_panel"
+            android:layout_width="match_parent"
+            android:layout_height="300dp"
+            android:layout_marginTop="10dp" />
+
+        <include
+            layout="@layout/component_memo_panel"
+            android:layout_width="match_parent"
+            android:layout_height="190dp"
+            android:layout_marginTop="10dp" />
+
+        <include
+            layout="@layout/component_operator_controls"
+            android:layout_width="match_parent"
+            android:layout_height="180dp"
+            android:layout_marginTop="10dp" />
+
+        <include
+            layout="@layout/component_risk_panel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="Mock mode only. No OSC/TCP command is sent."
-            android:textColor="@color/show_muted"
-            android:textSize="13sp" />
+            android:layout_marginTop="10dp" />
 
-        <TextView
-            style="@style/ShowSectionTitle"
-            android:text="Risk Indicators" />
-
-        <LinearLayout
-            android:id="@+id/riskContainer"
-            style="@style/ShowVerticalList" />
-
-        <TextView
-            style="@style/ShowSectionTitle"
-            android:text="Upcoming Lighting" />
-
-        <LinearLayout
-            android:id="@+id/lightingContainer"
-            style="@style/ShowVerticalList" />
-
-        <TextView
-            style="@style/ShowSectionTitle"
-            android:text="Scene Checklist" />
-
-        <LinearLayout
-            android:id="@+id/checklistContainer"
-            style="@style/ShowVerticalList" />
-
-        <TextView
-            style="@style/ShowSectionTitle"
-            android:text="Should-Not-Be-Running Watchdog" />
-
-        <LinearLayout
-            android:id="@+id/watchdogContainer"
-            style="@style/ShowVerticalList" />
-
-        <TextView
-            style="@style/ShowSectionTitle"
-            android:text="Recovery" />
-
-        <com.google.android.material.card.MaterialCardView
+        <include
+            layout="@layout/component_checklist_panel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardBackgroundColor="@color/show_panel"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="0dp"
-            app:strokeColor="@color/show_border"
-            app:strokeWidth="1dp">
+            android:layout_marginTop="10dp" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:padding="12dp">
-
-                <TextView
-                    android:id="@+id/recoveryTitleText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/show_text"
-                    android:textSize="17sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/recoveryExpectedText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:textColor="@color/show_muted"
-                    android:textSize="14sp" />
-
-                <LinearLayout
-                    android:id="@+id/recoveryStepsContainer"
-                    style="@style/ShowVerticalList"
-                    android:layout_marginTop="10dp" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <TextView
-            style="@style/ShowSectionTitle"
-            android:text="Event Log" />
-
-        <LinearLayout
-            android:id="@+id/eventLogContainer"
-            style="@style/ShowVerticalList" />
+        <include
+            layout="@layout/component_event_log_panel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp" />
     </LinearLayout>
 </ScrollView>

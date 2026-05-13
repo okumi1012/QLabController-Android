@@ -24,7 +24,7 @@ class ShowStateBinder(private val activity: Activity) {
     }
 
     fun prependEvent(time: String, type: String, message: String) {
-        val container = find<LinearLayout>(R.id.eventLogContainer)
+        val container = optionalLinearLayout(R.id.eventLogContainer) ?: return
         container.addView(
             ShowHudUi.rowView(activity, "$time / ${type.uppercase()}", message, R.color.show_panel_alt),
             0
@@ -32,16 +32,18 @@ class ShowStateBinder(private val activity: Activity) {
     }
 
     private fun bindHeader(state: ShowState) {
-        find<TextView>(R.id.showTitleText).text = state.show.title
-        find<TextView>(R.id.sceneText).text = "${state.show.currentScene} / ${state.show.operator}"
-        find<TextView>(R.id.showClockText).text = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
-        ShowHudUi.setStatusBadge(find(R.id.modeText), state.show.mode)
-        ShowHudUi.setStatusBadge(find(R.id.connectionStatusText), "mock online")
+        optionalText(R.id.showTitleText)?.text = state.show.title
+        optionalText(R.id.sceneText)?.text = "${state.show.currentScene} / ${state.show.operator}"
+        optionalText(R.id.showClockText)?.text = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+        optionalText(R.id.modeText)?.let { ShowHudUi.setStatusBadge(it, state.show.mode) }
+        optionalText(R.id.connectionStatusText)?.let { ShowHudUi.setStatusBadge(it, "QLab online") }
+        optionalText(R.id.qlabStatusText)?.let { ShowHudUi.setStatusBadge(it, "QLab online") }
+        optionalText(R.id.ma2StatusText)?.let { ShowHudUi.setStatusBadge(it, "MA2 online") }
     }
 
     private fun bindSync(sync: SyncState) {
-        ShowHudUi.setStatusBadge(find(R.id.syncStatusText), "sync ${sync.status}")
-        find<TextView>(R.id.syncWarningText).text = if (sync.warnings.isEmpty()) {
+        optionalText(R.id.syncStatusText)?.let { ShowHudUi.setStatusBadge(it, "sync ${sync.status}") }
+        optionalText(R.id.syncWarningText)?.text = if (sync.warnings.isEmpty()) {
             "QLab and grandMA2 cue state is aligned."
         } else {
             sync.warnings.joinToString("\n")
@@ -88,8 +90,9 @@ class ShowStateBinder(private val activity: Activity) {
     }
 
     private fun bindRiskIndicators(items: List<RiskIndicator>) {
+        val container = optionalLinearLayout(R.id.riskContainer) ?: return
         ShowHudUi.fillRows(
-            find(R.id.riskContainer),
+            container,
             items.map { "${it.level.uppercase()} / ${it.label}" to it.message }
         ) { _, body ->
             val item = items.firstOrNull { it.message == body }
@@ -98,15 +101,21 @@ class ShowStateBinder(private val activity: Activity) {
     }
 
     private fun bindLighting(items: List<UpcomingLightingCue>) {
-        ShowHudUi.fillRows(
-            find(R.id.lightingContainer),
-            items.map { "MA2 Cue ${it.cue} / ${it.label}" to it.notes }
-        )
+        optionalText(R.id.expectedLightingText)?.text = items.firstOrNull()?.let {
+            "Expected: MA2 Cue ${it.cue} / ${it.label}\n${it.notes}"
+        } ?: "Expected lighting state unavailable."
+        optionalLinearLayout(R.id.lightingContainer)?.let { container ->
+            ShowHudUi.fillRows(
+                container,
+                items.map { "MA2 Cue ${it.cue} / ${it.label}" to it.notes }
+            )
+        }
     }
 
     private fun bindChecklist(items: List<ChecklistItem>) {
+        val container = optionalLinearLayout(R.id.checklistContainer) ?: return
         ShowHudUi.fillRows(
-            find(R.id.checklistContainer),
+            container,
             items.map { item ->
                 val status = if (item.done) "READY" else "PENDING"
                 "$status / ${item.label}" to if (item.done) "Complete" else "Needs confirmation before next transition"
@@ -117,8 +126,9 @@ class ShowStateBinder(private val activity: Activity) {
     }
 
     private fun bindWatchdog(items: List<WatchdogItem>) {
+        val container = optionalLinearLayout(R.id.watchdogContainer) ?: return
         ShowHudUi.fillRows(
-            find(R.id.watchdogContainer),
+            container,
             items.map { "${it.status.uppercase()} / ${it.label}" to watchdogMessage(it.status) }
         ) { title, _ ->
             ShowHudUi.statusColor(title)
@@ -137,16 +147,19 @@ class ShowStateBinder(private val activity: Activity) {
     private fun bindRecovery(recovery: RecoveryState) {
         optionalText(R.id.recoveryTitleText)?.text = recovery.title
         optionalText(R.id.recoveryExpectedText)?.text = "QLab: ${recovery.expectedQlabCue}\nMA2: ${recovery.expectedMa2Cue}"
-        ShowHudUi.fillRows(
-            find(R.id.recoveryStepsContainer),
-            recovery.steps.mapIndexed { index, step -> "Step ${index + 1}" to step }
-        )
+        optionalLinearLayout(R.id.recoveryStepsContainer)?.let { container ->
+            ShowHudUi.fillRows(
+                container,
+                recovery.steps.mapIndexed { index, step -> "Step ${index + 1}" to step }
+            )
+        }
     }
 
     private fun bindEventLog(items: List<EventLogItem>) {
+        val container = optionalLinearLayout(R.id.eventLogContainer) ?: return
         ShowHudUi.fillRows(
-            find(R.id.eventLogContainer),
-            items.map { "${it.time} / ${it.type.uppercase()}" to it.message }
+            container,
+            items.take(3).map { "${it.time} / ${it.type.uppercase()}" to it.message }
         ) { _, body ->
             when {
                 body.contains("warning", ignoreCase = true) -> R.color.show_prepare
@@ -158,6 +171,10 @@ class ShowStateBinder(private val activity: Activity) {
 
     private fun optionalText(id: Int): TextView? {
         return activity.findViewById<View>(id) as? TextView
+    }
+
+    private fun optionalLinearLayout(id: Int): LinearLayout? {
+        return activity.findViewById<View>(id) as? LinearLayout
     }
 
     private fun <T : View> find(id: Int): T = activity.findViewById(id)
