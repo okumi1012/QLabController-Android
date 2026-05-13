@@ -1,0 +1,155 @@
+{
+  "show": {
+    "title": "Winter Room",
+    "mode": "performance",
+    "currentScene": "Scene 3",
+    "status": "running",
+    "operator": "Solo operator"
+  },
+  "qlab": {
+    "currentCue": {
+      "id": "A12",
+      "number": "12",
+      "name": "Door knock SFX",
+      "type": "audio",
+      "memo": "Wait for actor to fully turn before GO.",
+      "remainingTime": 4.2,
+      "isRunning": true,
+      "risk": "medium"
+    },
+    "nextCue": {
+      "id": "A13",
+      "number": "13",
+      "name": "Blackout transition",
+      "type": "group",
+      "memo": "Prepare for fast transition. Confirm actor exits SR.",
+      "remainingTime": null,
+      "isRunning": false,
+      "risk": "high"
+    }
+  },
+  "ma2": {
+    "currentCue": {
+      "sequence": "Main",
+      "cue": "23",
+      "name": "Interior warm wash",
+      "memo": "Normal state.",
+      "risk": "low"
+    },
+    "nextCue": {
+      "sequence": "Main",
+      "cue": "24",
+      "name": "Snap blackout",
+      "memo": "Must sync with QLab A13.",
+      "risk": "high"
+    }
+  },
+  "sync": {
+    "status": "mismatch",
+    "warnings": [
+      "QLab next cue A13 and MA2 next cue 24 are intended to fire together.",
+      "Confirm actor is fully clear before pressing GO."
+    ]
+  },
+  "riskIndicators": [
+    {
+      "id": "r1",
+      "level": "high",
+      "label": "Blackout",
+      "message": "Next transition removes all stage light."
+    },
+    {
+      "id": "r2",
+      "level": "medium",
+      "label": "Sound timing",
+      "message": "Door knock must follow actor head turn."
+    },
+    {
+      "id": "r3",
+      "level": "high",
+      "label": "Automation",
+      "message": "Scene change starts projector shutter macro."
+    }
+  ],
+  "upcomingLighting": [
+    {
+      "id": "l1",
+      "cue": "24",
+      "label": "Snap blackout",
+      "notes": "Fast blackout with QLab A13."
+    },
+    {
+      "id": "l2",
+      "cue": "25",
+      "label": "Corridor special",
+      "notes": "Bring up SR special after actor crosses."
+    }
+  ],
+  "checklist": [
+    {
+      "id": "c1",
+      "label": "Prop table ready",
+      "done": true
+    },
+    {
+      "id": "c2",
+      "label": "Actor in position SR",
+      "done": false
+    },
+    {
+      "id": "c3",
+      "label": "Backstage headset quiet",
+      "done": true
+    }
+  ],
+  "watchdog": [
+    {
+      "id": "w1",
+      "label": "Rain ambience should not be running after Scene 2",
+      "status": "warning"
+    },
+    {
+      "id": "w2",
+      "label": "Door knock one-shot should stop within 5 seconds",
+      "status": "ok"
+    },
+    {
+      "id": "w3",
+      "label": "Projector shutter macro should finish before blackout",
+      "status": "attention"
+    }
+  ],
+  "eventLog": [
+    {
+      "time": "19:42:11",
+      "type": "cue",
+      "message": "QLab Cue A12 started"
+    },
+    {
+      "time": "19:42:12",
+      "type": "lighting",
+      "message": "MA2 Main Cue 23 active"
+    },
+    {
+      "time": "19:42:16",
+      "type": "warning",
+      "message": "Next transition is high risk"
+    },
+    {
+      "time": "19:42:19",
+      "type": "watchdog",
+      "message": "Rain ambience still detected"
+    }
+  ],
+  "recovery": {
+    "title": "Recover Scene 3 Interior",
+    "expectedQlabCue": "A12 running, A13 standing by",
+    "expectedMa2Cue": "Main / 23 active, 24 next",
+    "steps": [
+      "Stop rain ambience if still active.",
+      "Set QLab selected cue to A13.",
+      "Set MA2 executor Main to Cue 23 active and Cue 24 next.",
+      "Confirm actor SR position before continuing."
+    ]
+  }
+}

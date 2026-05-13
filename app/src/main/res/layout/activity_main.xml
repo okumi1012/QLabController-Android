@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/screen_background"
+    android:background="@color/show_bg"
     android:fillViewport="true"
     tools:context=".MainActivity">
 
@@ -12,17 +12,14 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingStart="20dp"
-        android:paddingTop="28dp"
-        android:paddingEnd="20dp"
-        android:paddingBottom="24dp">
+        android:padding="18dp">
 
         <TextView
             android:id="@+id/titleText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/app_name"
-            android:textColor="@color/text_primary"
+            android:text="Show Control Assistant"
+            android:textColor="@color/show_text"
             android:textSize="30sp"
             android:textStyle="bold" />
 
@@ -31,120 +28,97 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:text="Connect to an open QLab workspace."
-            android:textColor="@color/text_secondary"
+            android:text="Mock performance HUD for solo QLab and grandMA2 operation."
+            android:textColor="@color/show_muted"
             android:textSize="16sp" />
 
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/scanCard"
-            android:layout_width="match_parent"
-            android:layout_height="128dp"
-            android:layout_marginTop="28dp"
-            android:clickable="true"
-            android:focusable="true"
-            android:foreground="?attr/selectableItemBackground"
-            app:cardBackgroundColor="@color/surface"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="2dp"
-            app:strokeColor="@color/border_subtle"
-            app:strokeWidth="1dp">
+            android:id="@+id/operatorCard"
+            style="@style/HomeActionCard"
+            android:layout_marginTop="24dp"
+            app:strokeColor="@color/show_go">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="18dp">
-
+            <LinearLayout style="@style/HomeActionContent">
                 <TextView
-                    android:layout_width="52dp"
-                    android:layout_height="52dp"
-                    android:background="@color/surface_muted"
-                    android:gravity="center"
-                    android:text="LAN"
-                    android:textColor="@color/accent_blue_dark"
-                    android:textSize="15sp"
-                    android:textStyle="bold" />
+                    style="@style/HomeActionBadge"
+                    android:text="OP" />
 
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                <LinearLayout style="@style/HomeActionTextBlock">
+                    <TextView
+                        style="@style/HomeActionTitle"
+                        android:text="Operator Control Screen" />
 
                     <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Find QLab"
-                        android:textColor="@color/text_primary"
-                        android:textSize="21sp"
-                        android:textStyle="bold" />
+                        style="@style/HomeActionSubtitle"
+                        android:text="Active show operation with mock GO, cue memos, risks, checklist, watchdog, and recovery." />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/passiveHudCard"
+            style="@style/HomeActionCard"
+            app:strokeColor="@color/show_prepare">
+
+            <LinearLayout style="@style/HomeActionContent">
+                <TextView
+                    style="@style/HomeActionBadge"
+                    android:text="HUD" />
+
+                <LinearLayout style="@style/HomeActionTextBlock">
+                    <TextView
+                        style="@style/HomeActionTitle"
+                        android:text="Passive HUD Screen" />
 
                     <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Use Bonjour first, then OSC fallback scan."
-                        android:textColor="@color/text_secondary"
-                        android:textSize="15sp" />
+                        style="@style/HomeActionSubtitle"
+                        android:text="Monitor-only display. No trigger controls are present in this screen." />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            style="@style/ShowSectionTitle"
+            android:text="Live QLab Connection Tools" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/scanCard"
+            style="@style/HomeActionCard">
+
+            <LinearLayout style="@style/HomeActionContent">
+                <TextView
+                    style="@style/HomeActionBadge"
+                    android:text="LAN" />
+
+                <LinearLayout style="@style/HomeActionTextBlock">
+                    <TextView
+                        style="@style/HomeActionTitle"
+                        android:text="Find QLab" />
+
+                    <TextView
+                        style="@style/HomeActionSubtitle"
+                        android:text="Bonjour discovery with OSC fallback scan for a real QLab workspace." />
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/manualCard"
-            android:layout_width="match_parent"
-            android:layout_height="128dp"
-            android:layout_marginTop="14dp"
-            android:clickable="true"
-            android:focusable="true"
-            android:foreground="?attr/selectableItemBackground"
-            app:cardBackgroundColor="@color/surface"
-            app:cardCornerRadius="8dp"
-            app:cardElevation="2dp"
-            app:strokeColor="@color/border_subtle"
-            app:strokeWidth="1dp">
+            style="@style/HomeActionCard">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="18dp">
-
+            <LinearLayout style="@style/HomeActionContent">
                 <TextView
-                    android:layout_width="52dp"
-                    android:layout_height="52dp"
-                    android:background="@color/surface_muted"
-                    android:gravity="center"
-                    android:text="IP"
-                    android:textColor="@color/accent_blue_dark"
-                    android:textSize="17sp"
-                    android:textStyle="bold" />
+                    style="@style/HomeActionBadge"
+                    android:text="IP" />
 
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                <LinearLayout style="@style/HomeActionTextBlock">
+                    <TextView
+                        style="@style/HomeActionTitle"
+                        android:text="Manual QLab Connect" />
 
                     <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Manual Connect"
-                        android:textColor="@color/text_primary"
-                        android:textSize="21sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="Enter the Mac IP address and OSC port."
-                        android:textColor="@color/text_secondary"
-                        android:textSize="15sp" />
+                        style="@style/HomeActionSubtitle"
+                        android:text="Enter Mac IP, OSC port, and passcode for the existing live remote mode." />
                 </LinearLayout>
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -153,7 +127,7 @@
             android:id="@+id/settingsButton"
             android:layout_width="match_parent"
             android:layout_height="52dp"
-            android:layout_marginTop="32dp"
+            android:layout_marginTop="24dp"
             android:backgroundTint="@color/button_neutral"
             android:text="Settings"
             android:textColor="@color/white"

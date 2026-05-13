@@ -16,6 +16,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupClickListeners() {
+        findViewById<MaterialCardView>(R.id.operatorCard).setOnClickListener {
+            val intent = Intent(this, OperatorControlActivity::class.java)
+            startActivity(intent)
+        }
+
+        findViewById<MaterialCardView>(R.id.passiveHudCard).setOnClickListener {
+            val intent = Intent(this, PassiveHudActivity::class.java)
+            startActivity(intent)
+        }
+
         findViewById<MaterialCardView>(R.id.scanCard).setOnClickListener {
             // Navigate to network scan screen
             val intent = Intent(this, NetworkScanActivity::class.java)

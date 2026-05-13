@@ -22,6 +22,19 @@
     <color name="accent_blue_dark">#FF1D4ED8</color>
     <color name="button_neutral">#FF475569</color>
 
+    <color name="show_bg">#FF05070A</color>
+    <color name="show_panel">#FF101722</color>
+    <color name="show_panel_alt">#FF172033</color>
+    <color name="show_border">#FF2A3648</color>
+    <color name="show_text">#FFF8FAFC</color>
+    <color name="show_muted">#FFB6C2D1</color>
+    <color name="show_dim">#FF718096</color>
+    <color name="show_prepare">#FFF59E0B</color>
+    <color name="show_danger">#FFEF4444</color>
+    <color name="show_ok">#FF22C55E</color>
+    <color name="show_info">#FF38BDF8</color>
+    <color name="show_go">#FF16A34A</color>
+
     <!-- Light mode specific -->
     <color name="background_light">#FFF8FAFC</color>
     <color name="surface_light">#FFFFFFFF</color>

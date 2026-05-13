@@ -40,6 +40,18 @@
             android:name=".SettingsActivity"
             android:exported="false" />
 
+        <!-- Mock Operator Control HUD -->
+        <activity
+            android:name=".OperatorControlActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
+        <!-- Passive monitoring HUD with no trigger controls -->
+        <activity
+            android:name=".PassiveHudActivity"
+            android:exported="false"
+            android:screenOrientation="portrait" />
+
         <!-- Debug Log Activity - View debug logs -->
         <activity
             android:name=".DebugLogActivity"
