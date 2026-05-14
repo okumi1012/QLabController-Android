@@ -54,6 +54,25 @@ object ShowHudUi {
         textView.setPadding(textView.context.dp(10), textView.context.dp(4), textView.context.dp(10), textView.context.dp(4))
     }
 
+    fun setStatusChip(textView: TextView, label: String, state: String) {
+        textView.text = label.uppercase()
+        textView.setTextColor(textView.context.getColor(R.color.show_bg))
+        textView.setTypeface(Typeface.DEFAULT, Typeface.BOLD)
+        textView.maxLines = 1
+        textView.ellipsize = TextUtils.TruncateAt.END
+        val color = when (state.lowercase()) {
+            "normal", "ready" -> R.color.show_ok
+            "warning" -> R.color.show_prepare
+            "danger" -> R.color.show_danger
+            "disconnected" -> R.color.show_disconnected
+            "correcting" -> R.color.show_info
+            "inactive" -> R.color.show_panel_alt
+            else -> statusColor(state)
+        }
+        textView.background = roundedFill(textView.context, color, 12f)
+        textView.setPadding(textView.context.dp(9), textView.context.dp(4), textView.context.dp(9), textView.context.dp(4))
+    }
+
     fun fillRows(
         container: LinearLayout,
         rows: List<Pair<String, String>>,

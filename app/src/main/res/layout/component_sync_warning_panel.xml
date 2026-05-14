@@ -20,7 +20,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="SYNC WARNING"
+            android:text="SYNC"
             android:textColor="@color/show_prepare"
             android:textSize="12sp"
             android:textStyle="bold" />
@@ -31,9 +31,11 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="5dp"
             android:ellipsize="end"
-            android:maxLines="3"
+            android:gravity="center"
+            android:maxLines="1"
             android:textColor="@color/show_text"
-            android:textSize="13sp"
-            tools:text="QLab and MA2 next cues must fire together." />
+            android:textSize="20sp"
+            android:textStyle="bold"
+            tools:text="MIS" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

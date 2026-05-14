@@ -4,6 +4,7 @@ import android.app.Activity
 import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
+import com.google.android.material.card.MaterialCardView
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -44,9 +45,9 @@ class ShowStateBinder(private val activity: Activity) {
     private fun bindSync(sync: SyncState) {
         optionalText(R.id.syncStatusText)?.let { ShowHudUi.setStatusBadge(it, "sync ${sync.status}") }
         optionalText(R.id.syncWarningText)?.text = if (sync.warnings.isEmpty()) {
-            "QLab and grandMA2 cue state is aligned."
+            "OK"
         } else {
-            sync.warnings.joinToString("\n")
+            "MIS"
         }
     }
 
@@ -64,6 +65,7 @@ class ShowStateBinder(private val activity: Activity) {
         find<TextView>(R.id.qlabNextNameText).text = next.name
         find<TextView>(R.id.qlabNextMetaText).text = next.type
         ShowHudUi.setRiskBadge(find(R.id.qlabNextRiskText), next.risk)
+        applyRiskFrame(R.id.qlabCueCard, next.risk)
     }
 
     private fun bindMa2(ma2: Ma2Section) {
@@ -76,6 +78,7 @@ class ShowStateBinder(private val activity: Activity) {
         find<TextView>(R.id.ma2NextNameText).text = next.name
         find<TextView>(R.id.ma2NextMetaText).text = next.sequence
         ShowHudUi.setRiskBadge(find(R.id.ma2NextRiskText), next.risk)
+        applyRiskFrame(R.id.ma2CueCard, next.risk)
     }
 
     private fun bindMemos(state: ShowState) {
@@ -90,6 +93,18 @@ class ShowStateBinder(private val activity: Activity) {
     }
 
     private fun bindRiskIndicators(items: List<RiskIndicator>) {
+        optionalText(R.id.riskStatusText)?.let { chip ->
+            val highestRisk = items.firstOrNull { it.level.equals("high", ignoreCase = true) }
+                ?: items.firstOrNull { it.level.equals("medium", ignoreCase = true) }
+                ?: items.firstOrNull()
+            val state = when (highestRisk?.level?.lowercase()) {
+                "high", "danger" -> "danger"
+                "medium", "warning" -> "warning"
+                null -> "inactive"
+                else -> "normal"
+            }
+            ShowHudUi.setStatusChip(chip, "RISK", state)
+        }
         val container = optionalLinearLayout(R.id.riskContainer) ?: return
         ShowHudUi.fillRows(
             container,
@@ -175,6 +190,14 @@ class ShowStateBinder(private val activity: Activity) {
 
     private fun optionalLinearLayout(id: Int): LinearLayout? {
         return activity.findViewById<View>(id) as? LinearLayout
+    }
+
+    private fun applyRiskFrame(id: Int, risk: String) {
+        val card = activity.findViewById<View>(id) as? MaterialCardView ?: return
+        card.strokeColor = activity.getColor(ShowHudUi.riskColor(risk))
+        card.strokeWidth = activity.resources.displayMetrics.density.times(
+            if (risk.equals("high", ignoreCase = true) || risk.equals("danger", ignoreCase = true)) 3f else 1.5f
+        ).toInt()
     }
 
     private fun <T : View> find(id: Int): T = activity.findViewById(id)

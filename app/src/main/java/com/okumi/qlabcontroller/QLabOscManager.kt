@@ -37,6 +37,8 @@ class QLabOscManager private constructor() {
     private var currentCueId: String? = null
     private var currentCueNotes: String = ""
     private val cueList = mutableListOf<CueData>()
+    private val cueStateReconciler = CueStateReconciler()
+    private val requestedChildCueIds = mutableSetOf<String>()
     private var workspaceId: String? = null
     private var workspaceName: String = "QLab Controller"
     private var mainCueListId: String? = null
@@ -68,7 +70,9 @@ class QLabOscManager private constructor() {
         val number: String,
         val name: String,
         val type: String,
-        val notes: String = ""
+        val notes: String = "",
+        val parentId: String? = null,
+        val isRunning: Boolean = false
     )
 
     data class ConnectionInfo(
@@ -261,7 +265,7 @@ class QLabOscManager private constructor() {
             when {
                 address.contains("/playbackPosition") -> {
                     synchronized(stateLock) {
-                        setCurrentCueLocked(arguments.firstOrNull() as? String)
+                        setCurrentCueLocked(arguments.firstOrNull() as? String, keepExistingOnAmbiguous = true)
                     }
                     requestCurrentCueNotes()
                 }
@@ -303,12 +307,28 @@ class QLabOscManager private constructor() {
                 return
             }
 
+            val childParentId = QLabCueStateParser.childParentIdFromRequest(requestAddress)
+            if (childParentId != null) {
+                val isMainCueList = synchronized(stateLock) { childParentId == mainCueListId }
+                synchronized(stateLock) {
+                    if (isMainCueList) {
+                        replaceCueList(data)
+                    } else {
+                        replaceChildCueListLocked(childParentId, data)
+                    }
+                }
+                requestChildrenForKnownGroups()
+                requestPlaybackPosition()
+                return
+            }
+
             if (firstItem.has("cues")) {
                 val cuesArray = firstItem.optJSONArray("cues")
                 synchronized(stateLock) {
                     mainCueListId = firstItem.optString("uniqueID")
                     replaceCueList(cuesArray)
                 }
+                requestChildrenForKnownGroups()
                 requestPlaybackPosition()
                 scope.launch {
                     delay(100)
@@ -328,6 +348,7 @@ class QLabOscManager private constructor() {
             synchronized(stateLock) {
                 replaceCueList(data)
             }
+            requestChildrenForKnownGroups()
             requestPlaybackPosition()
         } catch (e: Exception) {
             LogManager.e(TAG, "Error handling data response", e)
@@ -350,25 +371,43 @@ class QLabOscManager private constructor() {
 
         val isPlaybackPositionResponse = requestAddress.contains("/playbackPosition") ||
             requestAddress.contains("/playhead")
-        if (isPlaybackPositionResponse && dataString.isNotEmpty() && dataString != "none") {
+        val normalizedCueId = dataString.normalizeCueId()
+        if (isPlaybackPositionResponse && normalizedCueId != null) {
             var changed = false
             synchronized(stateLock) {
-                changed = currentCueId != dataString
-                setCurrentCueLocked(dataString)
+                changed = currentCueId != normalizedCueId
+                setCurrentCueLocked(normalizedCueId)
             }
             if (changed) {
                 requestCurrentCueNotes()
             }
-        } else if (isPlaybackPositionResponse && dataString == "none") {
+        } else if (isPlaybackPositionResponse && dataString.equals("none", ignoreCase = true)) {
             synchronized(stateLock) {
                 setCurrentCueLocked(null)
             }
+        } else if (isPlaybackPositionResponse) {
+            LogManager.w(TAG, "Ignoring ambiguous playback position '$dataString'")
         }
     }
 
-    private fun setCurrentCueLocked(cueId: String?) {
-        currentCueId = cueId
-        currentCueNotes = cueId?.let { id ->
+    private fun setCurrentCueLocked(cueId: String?, keepExistingOnAmbiguous: Boolean = false) {
+        val normalizedCueId = cueId.normalizeCueId()
+        if (normalizedCueId == null && keepExistingOnAmbiguous && currentCueId != null) {
+            LogManager.w(TAG, "Keeping current cue '$currentCueId' while QLab reports ambiguous position '$cueId'")
+            return
+        }
+        if (normalizedCueId == null) {
+            currentCueId = null
+            currentCueNotes = ""
+            cueStateReconciler.reset()
+            return
+        }
+        currentCueId = normalizedCueId
+        val corrected = cueStateReconciler.setNetworkCue(normalizedCueId)
+        if (corrected) {
+            LogManager.w(TAG, "Cue prediction corrected by network state: $normalizedCueId")
+        }
+        currentCueNotes = normalizedCueId?.let { id ->
             cueList.firstOrNull { it.uniqueId == id || it.number == id }?.notes
         }.orEmpty()
     }
@@ -381,28 +420,49 @@ class QLabOscManager private constructor() {
 
     private fun replaceCueList(cuesArray: JSONArray?) {
         cueList.clear()
-        if (cuesArray == null) return
-
-        for (i in 0 until cuesArray.length()) {
-            val cue = cuesArray.getJSONObject(i)
-            val cueName = cue.optString("name", "").ifEmpty {
-                cue.optString("listName", "Untitled")
-            }
-            val cueNotes = cue.optString("notes", "").ifEmpty {
-                cue.optString("note", "")
-            }
-
-            cueList.add(
-                CueData(
-                    uniqueId = cue.optString("uniqueID", ""),
-                    number = cue.optString("number", ""),
-                    name = cueName,
-                    type = cue.optString("type", ""),
-                    notes = cueNotes
-                )
-            )
-        }
+        requestedChildCueIds.clear()
+        cueList.addAll(QLabCueStateParser.parseCueArray(cuesArray))
         LogManager.d(TAG, "Loaded ${cueList.size} cues")
+    }
+
+    private fun replaceChildCueListLocked(parentId: String, cuesArray: JSONArray?) {
+        val children = QLabCueStateParser.parseCueArray(cuesArray, parentId)
+        val descendants = mutableSetOf(parentId)
+        var changed: Boolean
+        do {
+            changed = false
+            cueList.forEach { cue ->
+                val cueParentId = cue.parentId
+                if (cueParentId != null && cueParentId in descendants && descendants.add(cue.uniqueId)) {
+                    changed = true
+                }
+            }
+        } while (changed)
+
+        cueList.removeAll { cue -> cue.parentId?.let { it in descendants } == true }
+        val parentIndex = cueList.indexOfFirst { it.uniqueId == parentId }
+        if (parentIndex == -1) {
+            cueList.addAll(children)
+        } else {
+            cueList.addAll(parentIndex + 1, children)
+        }
+        LogManager.d(TAG, "Loaded ${children.size} child cues for $parentId; flattened list has ${cueList.size} cues")
+    }
+
+    private fun requestChildrenForKnownGroups() {
+        val groupCueIds = synchronized(stateLock) {
+            cueList.filter { cue ->
+                cue.uniqueId.isNotBlank() &&
+                    cue.type.contains("group", ignoreCase = true) &&
+                    cue.uniqueId !in requestedChildCueIds
+            }.map { it.uniqueId }.take(24)
+        }
+        groupCueIds.forEach { cueId ->
+            synchronized(stateLock) {
+                requestedChildCueIds.add(cueId)
+            }
+            requestCuesFromList(cueId)
+        }
     }
 
     private fun handleCueResponse(json: JSONObject) {
@@ -410,7 +470,7 @@ class QLabOscManager private constructor() {
         if (!requestAddress.contains("/playbackPosition") && !requestAddress.contains("/playhead")) return
 
         synchronized(stateLock) {
-            setCurrentCueLocked(json.optString("uniqueID"))
+            setCurrentCueLocked(json.optString("uniqueID"), keepExistingOnAmbiguous = true)
         }
         LogManager.d(TAG, "Current cue ID: $currentCueId")
     }
@@ -473,6 +533,8 @@ class QLabOscManager private constructor() {
 
             synchronized(stateLock) {
                 cueList.clear()
+                requestedChildCueIds.clear()
+                cueStateReconciler.reset()
                 currentCueId = null
                 currentCueNotes = ""
                 workspaceId = null
@@ -487,6 +549,39 @@ class QLabOscManager private constructor() {
             LogManager.d(TAG, "Disconnected from QLab")
         } catch (e: Exception) {
             LogManager.e(TAG, "Error disconnecting from QLab", e)
+        }
+    }
+
+    fun predictGo(): CueInfo = predictCueNavigation(CueStateReconciler.Action.Go)
+
+    fun predictPrevious(): CueInfo = predictCueNavigation(CueStateReconciler.Action.Previous)
+
+    fun predictNext(): CueInfo = predictCueNavigation(CueStateReconciler.Action.Next)
+
+    fun getDisplayedCueInfo(): CueInfo {
+        return synchronized(stateLock) {
+            QLabCueStateParser.buildCueInfo(
+                cues = cueList,
+                displayedCueId = cueStateReconciler.displayedCueId() ?: currentCueId,
+                currentNotes = currentCueNotes,
+                networkCorrected = cueStateReconciler.consumeCorrectionPending()
+            )
+        }
+    }
+
+    private fun predictCueNavigation(action: CueStateReconciler.Action): CueInfo {
+        return synchronized(stateLock) {
+            cueStateReconciler.predict(action, cueList, currentCueId)
+            val displayedCueId = cueStateReconciler.displayedCueId()
+            cueList.firstOrNull { it.uniqueId == displayedCueId || it.number == displayedCueId }?.let {
+                currentCueNotes = it.notes
+            }
+            QLabCueStateParser.buildCueInfo(
+                cues = cueList,
+                displayedCueId = displayedCueId ?: currentCueId,
+                currentNotes = currentCueNotes,
+                networkCorrected = false
+            ).copy(isPredicted = true)
         }
     }
 
@@ -529,23 +624,11 @@ class QLabOscManager private constructor() {
         refreshPlaybackPosition()
 
         synchronized(stateLock) {
-            val currentIndex = cueList.indexOfFirst {
-                it.uniqueId == currentCueId || it.number == currentCueId
-            }
-
-            fun cueText(index: Int): String {
-                if (index !in cueList.indices) return "---"
-                val cue = cueList[index]
-                return "${cue.number} ${cue.name}"
-            }
-
-            CueInfo(
-                previous2Cue = cueText(currentIndex - 2),
-                previousCue = cueText(currentIndex - 1),
-                currentCue = cueText(currentIndex),
-                nextCue = cueText(currentIndex + 1),
-                next2Cue = cueText(currentIndex + 2),
-                currentNotes = currentCueNotes
+            QLabCueStateParser.buildCueInfo(
+                cues = cueList,
+                displayedCueId = cueStateReconciler.displayedCueId() ?: currentCueId,
+                currentNotes = currentCueNotes,
+                networkCorrected = cueStateReconciler.consumeCorrectionPending()
             )
         }
     }

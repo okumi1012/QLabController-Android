@@ -18,6 +18,9 @@ class ControlActivity : AppCompatActivity() {
 
     private lateinit var titleText: TextView
     private lateinit var infoButton: ImageButton
+    private lateinit var qlabStatusChip: TextView
+    private lateinit var syncStatusChip: TextView
+    private lateinit var netStatusChip: TextView
     private lateinit var previous2CueText: TextView
     private lateinit var previousCueText: TextView
     private lateinit var currentCueText: TextView
@@ -52,6 +55,9 @@ class ControlActivity : AppCompatActivity() {
     private fun initializeViews() {
         titleText = findViewById(R.id.titleText)
         infoButton = findViewById(R.id.infoButton)
+        qlabStatusChip = findViewById(R.id.qlabStatusChip)
+        syncStatusChip = findViewById(R.id.syncStatusChip)
+        netStatusChip = findViewById(R.id.netStatusChip)
         previous2CueText = findViewById(R.id.previous2CueText)
         previousCueText = findViewById(R.id.previousCueText)
         currentCueText = findViewById(R.id.currentCueText)
@@ -67,6 +73,9 @@ class ControlActivity : AppCompatActivity() {
 
         // Set title to workspace name
         titleText.text = qLabManager.getWorkspaceName()
+        ShowHudUi.setStatusChip(qlabStatusChip, "QLAB", "normal")
+        ShowHudUi.setStatusChip(syncStatusChip, "SYNC", "normal")
+        ShowHudUi.setStatusChip(netStatusChip, "NET", "normal")
     }
 
     private fun setupClickListeners() {
@@ -108,24 +117,33 @@ class ControlActivity : AppCompatActivity() {
         val cueInfo = qLabManager.getCurrentCueInfo()
         LogManager.d("ControlActivity", "Updating UI - Notes: '${cueInfo.currentNotes}'")
         runOnUiThread {
-            previous2CueText.text = cueInfo.previous2Cue
-            previousCueText.text = cueInfo.previousCue
-            currentCueText.text = cueInfo.currentCue
-            nextCueText.text = cueInfo.nextCue
-            next2CueText.text = cueInfo.next2Cue
+            renderCueInfo(cueInfo)
+        }
+    }
 
-            // Always show notes card, with default text if empty
-            notesText.text = if (cueInfo.currentNotes.isNotEmpty()) {
-                cueInfo.currentNotes
-            } else {
-                "No notes for this cue"
-            }
+    private fun renderCueInfo(cueInfo: CueInfo) {
+        previous2CueText.text = cueInfo.previous2Cue
+        previousCueText.text = cueInfo.previousCue
+        currentCueText.text = cueInfo.currentCue
+        nextCueText.text = cueInfo.nextCue
+        next2CueText.text = cueInfo.next2Cue
+
+        notesText.text = if (cueInfo.currentNotes.isNotEmpty()) {
+            cueInfo.currentNotes
+        } else {
+            "No cue memo"
+        }
+        when {
+            cueInfo.isNetworkCorrected -> ShowHudUi.setStatusChip(netStatusChip, "NET", "correcting")
+            cueInfo.isPredicted -> ShowHudUi.setStatusChip(netStatusChip, "NET", "warning")
+            else -> ShowHudUi.setStatusChip(netStatusChip, "NET", "normal")
         }
     }
 
     private fun sendPreviousCommand() {
         lifecycleScope.launch {
             setNavigationButtonsEnabled(false)
+            renderCueInfo(qLabManager.predictPrevious())
             try {
                 qLabManager.sendPrevious()
                 scheduleFastCueRefresh()
@@ -138,6 +156,7 @@ class ControlActivity : AppCompatActivity() {
     private fun sendGoCommand() {
         lifecycleScope.launch {
             setNavigationButtonsEnabled(false)
+            renderCueInfo(qLabManager.predictGo())
             try {
                 qLabManager.sendGo()
                 scheduleFastCueRefresh()
@@ -150,6 +169,7 @@ class ControlActivity : AppCompatActivity() {
     private fun sendNextCommand() {
         lifecycleScope.launch {
             setNavigationButtonsEnabled(false)
+            renderCueInfo(qLabManager.predictNext())
             try {
                 qLabManager.sendNext()
                 scheduleFastCueRefresh()

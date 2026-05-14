@@ -6,5 +6,7 @@ data class CueInfo(
     val currentCue: String = "---",
     val nextCue: String = "---",
     val next2Cue: String = "---",
-    val currentNotes: String = ""
+    val currentNotes: String = "",
+    val isPredicted: Boolean = false,
+    val isNetworkCorrected: Boolean = false
 )
