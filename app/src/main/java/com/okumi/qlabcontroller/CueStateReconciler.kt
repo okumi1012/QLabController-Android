@@ -7,25 +7,38 @@ class CueStateReconciler {
         Next
     }
 
-    private var networkCueId: String? = null
-    private var predictedCueId: String? = null
-    private var displayedCueId: String? = null
+    data class Flags(
+        val networkCorrected: Boolean,
+        val externalCueChange: Boolean,
+        val localMovement: Boolean
+    )
+
+    private var confirmedCueState: String? = null
+    private var predictedCueState: String? = null
+    private var displayedCueState: String? = null
     private var correctionPending = false
+    private var externalCueChangePending = false
+    private var localMovementPending = false
 
     fun setNetworkCue(cueId: String?): Boolean {
         val normalized = cueId.normalizeCueId()
-        val predicted = predictedCueId
+        val previousConfirmed = confirmedCueState
+        val predicted = predictedCueState
         correctionPending = predicted != null && predicted != normalized
-        networkCueId = normalized
-        predictedCueId = null
-        displayedCueId = normalized ?: displayedCueId
+        externalCueChangePending = predicted == null &&
+            previousConfirmed != null &&
+            normalized != null &&
+            previousConfirmed != normalized
+        confirmedCueState = normalized
+        predictedCueState = null
+        displayedCueState = normalized ?: displayedCueState
         return correctionPending
     }
 
     fun predict(action: Action, cues: List<QLabOscManager.CueData>, currentCueId: String?): String? {
-        val current = currentCueId.normalizeCueId() ?: displayedCueId ?: networkCueId
+        val current = currentCueId.normalizeCueId() ?: displayedCueState ?: confirmedCueState
         val currentIndex = cues.indexOfFirst { it.matches(current) }
-        if (currentIndex == -1) return displayedCueId
+        if (currentIndex == -1) return displayedCueState
 
         val nextIndex = when (action) {
             Action.Go,
@@ -34,26 +47,35 @@ class CueStateReconciler {
         }
         val predicted = cues.getOrNull(nextIndex)?.uniqueId.normalizeCueId()
         if (predicted != null) {
-            predictedCueId = predicted
-            displayedCueId = predicted
+            predictedCueState = predicted
+            displayedCueState = predicted
             correctionPending = false
+            localMovementPending = true
         }
-        return displayedCueId
+        return displayedCueState
     }
 
-    fun displayedCueId(): String? = displayedCueId ?: predictedCueId ?: networkCueId
+    fun displayedCueId(): String? = displayedCueState ?: predictedCueState ?: confirmedCueState
 
-    fun consumeCorrectionPending(): Boolean {
-        val result = correctionPending
+    fun consumeFlags(): Flags {
+        val result = Flags(
+            networkCorrected = correctionPending,
+            externalCueChange = externalCueChangePending,
+            localMovement = localMovementPending
+        )
         correctionPending = false
+        externalCueChangePending = false
+        localMovementPending = false
         return result
     }
 
     fun reset() {
-        networkCueId = null
-        predictedCueId = null
-        displayedCueId = null
+        confirmedCueState = null
+        predictedCueState = null
+        displayedCueState = null
         correctionPending = false
+        externalCueChangePending = false
+        localMovementPending = false
     }
 
     private fun QLabOscManager.CueData.matches(cueId: String?): Boolean {

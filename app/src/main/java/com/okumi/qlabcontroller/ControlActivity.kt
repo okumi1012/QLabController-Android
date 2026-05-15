@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.card.MaterialCardView
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -20,7 +21,14 @@ class ControlActivity : AppCompatActivity() {
     private lateinit var infoButton: ImageButton
     private lateinit var qlabStatusChip: TextView
     private lateinit var syncStatusChip: TextView
+    private lateinit var riskStatusChip: TextView
+    private lateinit var followStatusChip: TextView
     private lateinit var netStatusChip: TextView
+    private lateinit var groupStatusChip: TextView
+    private lateinit var externalStatusChip: TextView
+    private lateinit var localStatusChip: TextView
+    private lateinit var cueInfoCard: MaterialCardView
+    private lateinit var notesCard: MaterialCardView
     private lateinit var previous2CueText: TextView
     private lateinit var previousCueText: TextView
     private lateinit var currentCueText: TextView
@@ -57,7 +65,14 @@ class ControlActivity : AppCompatActivity() {
         infoButton = findViewById(R.id.infoButton)
         qlabStatusChip = findViewById(R.id.qlabStatusChip)
         syncStatusChip = findViewById(R.id.syncStatusChip)
+        riskStatusChip = findViewById(R.id.riskStatusChip)
+        followStatusChip = findViewById(R.id.followStatusChip)
         netStatusChip = findViewById(R.id.netStatusChip)
+        groupStatusChip = findViewById(R.id.groupStatusChip)
+        externalStatusChip = findViewById(R.id.externalStatusChip)
+        localStatusChip = findViewById(R.id.localStatusChip)
+        cueInfoCard = findViewById(R.id.cueInfoCard)
+        notesCard = findViewById(R.id.notesCard)
         previous2CueText = findViewById(R.id.previous2CueText)
         previousCueText = findViewById(R.id.previousCueText)
         currentCueText = findViewById(R.id.currentCueText)
@@ -75,7 +90,12 @@ class ControlActivity : AppCompatActivity() {
         titleText.text = qLabManager.getWorkspaceName()
         ShowHudUi.setStatusChip(qlabStatusChip, "QLAB", "normal")
         ShowHudUi.setStatusChip(syncStatusChip, "SYNC", "normal")
+        ShowHudUi.setStatusChip(riskStatusChip, "RISK", "inactive")
+        ShowHudUi.setStatusChip(followStatusChip, "FOL", "inactive")
         ShowHudUi.setStatusChip(netStatusChip, "NET", "normal")
+        ShowHudUi.setStatusChip(groupStatusChip, "GROUP", "inactive")
+        ShowHudUi.setStatusChip(externalStatusChip, "EXT", "inactive")
+        ShowHudUi.setStatusChip(localStatusChip, "LOCAL", "inactive")
     }
 
     private fun setupClickListeners() {
@@ -106,15 +126,21 @@ class ControlActivity : AppCompatActivity() {
 
     private fun startCueInfoUpdates() {
         lifecycleScope.launch {
+            var tick = 0
             while (qLabManager.isConnected()) {
-                updateCueInfo()
-                delay(1000) // Update every second
+                if (tick % 4 == 0) {
+                    updateCueInfo()
+                } else {
+                    renderCueInfo(qLabManager.getDisplayedCueInfo())
+                }
+                tick++
+                delay(250)
             }
         }
     }
 
     private suspend fun updateCueInfo() {
-        val cueInfo = qLabManager.getCurrentCueInfo()
+        val cueInfo = qLabManager.refreshCurrentCueInfo()
         LogManager.d("ControlActivity", "Updating UI - Notes: '${cueInfo.currentNotes}'")
         runOnUiThread {
             renderCueInfo(cueInfo)
@@ -128,16 +154,68 @@ class ControlActivity : AppCompatActivity() {
         nextCueText.text = cueInfo.nextCue
         next2CueText.text = cueInfo.next2Cue
 
-        notesText.text = if (cueInfo.currentNotes.isNotEmpty()) {
-            cueInfo.currentNotes
-        } else {
-            "No cue memo"
+        notesText.text = compactMemo(cueInfo)
+        renderStatusChips(cueInfo)
+        renderVisualState(cueInfo)
+    }
+
+    private fun compactMemo(cueInfo: CueInfo): String {
+        val current = cueInfo.currentNotes.trim()
+        val next = cueInfo.nextNotes.trim()
+        return when {
+            current.isNotEmpty() && next.isNotEmpty() -> "NOW $current\nNEXT $next"
+            next.isNotEmpty() -> "NEXT $next"
+            current.isNotEmpty() -> current
+            else -> "MEMO ---"
         }
+    }
+
+    private fun renderStatusChips(cueInfo: CueInfo) {
+        ShowHudUi.setStatusChip(qlabStatusChip, "QLAB", if (qLabManager.isConnected()) "normal" else "disconnected")
+        ShowHudUi.setStatusChip(syncStatusChip, "SYNC", "normal")
+        ShowHudUi.setStatusChip(riskStatusChip, "RISK", cueInfo.riskState)
+        ShowHudUi.setStatusChip(followStatusChip, "FOL", if (cueInfo.hasFollowTiming) "warning" else "inactive")
+        ShowHudUi.setStatusChip(groupStatusChip, "GROUP", if (cueInfo.isGroupCue) "correcting" else "inactive")
+        ShowHudUi.setStatusChip(externalStatusChip, "EXT", if (cueInfo.isExternalCueChange) "warning" else "inactive")
+        ShowHudUi.setStatusChip(localStatusChip, "LOCAL", if (cueInfo.isPredicted || cueInfo.isLocalMovement) "warning" else "inactive")
         when {
             cueInfo.isNetworkCorrected -> ShowHudUi.setStatusChip(netStatusChip, "NET", "correcting")
             cueInfo.isPredicted -> ShowHudUi.setStatusChip(netStatusChip, "NET", "warning")
             else -> ShowHudUi.setStatusChip(netStatusChip, "NET", "normal")
         }
+    }
+
+    private fun renderVisualState(cueInfo: CueInfo) {
+        val strokeColor = when (cueInfo.riskState) {
+            "danger" -> R.color.show_danger
+            "warning" -> R.color.show_prepare
+            else -> R.color.show_border
+        }
+        cueInfoCard.strokeColor = getColor(strokeColor)
+        cueInfoCard.strokeWidth = resources.displayMetrics.density.times(
+            if (cueInfo.riskState == "danger") 4f else if (cueInfo.riskState == "warning") 3f else 1f
+        ).toInt()
+        notesCard.strokeColor = getColor(if (cueInfo.hasFollowTiming) R.color.show_prepare else R.color.show_border)
+        notesCard.strokeWidth = resources.displayMetrics.density.times(if (cueInfo.hasFollowTiming) 2f else 1f).toInt()
+
+        if (cueInfo.riskState == "danger" || cueInfo.hasFollowTiming || cueInfo.isNetworkCorrected || cueInfo.isExternalCueChange) {
+            pulse(cueInfoCard)
+        }
+        if (cueInfo.isNetworkCorrected) pulse(netStatusChip)
+        if (cueInfo.isExternalCueChange) pulse(externalStatusChip)
+        if (cueInfo.isPredicted || cueInfo.isLocalMovement) pulse(localStatusChip)
+    }
+
+    private fun pulse(view: android.view.View) {
+        view.animate().cancel()
+        view.alpha = 1f
+        view.animate()
+            .alpha(0.55f)
+            .setDuration(120)
+            .withEndAction {
+                view.animate().alpha(1f).setDuration(180).start()
+            }
+            .start()
     }
 
     private fun sendPreviousCommand() {

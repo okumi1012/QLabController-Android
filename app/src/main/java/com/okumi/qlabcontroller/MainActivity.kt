@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.card.MaterialCardView
-import android.widget.Button
 
 class MainActivity : AppCompatActivity() {
 
@@ -16,30 +15,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupClickListeners() {
-        findViewById<MaterialCardView>(R.id.operatorCard).setOnClickListener {
-            val intent = Intent(this, OperatorControlActivity::class.java)
-            startActivity(intent)
-        }
-
-        findViewById<MaterialCardView>(R.id.passiveHudCard).setOnClickListener {
-            val intent = Intent(this, PassiveHudActivity::class.java)
-            startActivity(intent)
-        }
-
-        findViewById<MaterialCardView>(R.id.scanCard).setOnClickListener {
-            // Navigate to network scan screen
+        findViewById<MaterialCardView>(R.id.connectionCard).setOnClickListener {
             val intent = Intent(this, NetworkScanActivity::class.java)
             startActivity(intent)
         }
 
-        findViewById<MaterialCardView>(R.id.manualCard).setOnClickListener {
-            // Navigate to manual connection screen
-            val intent = Intent(this, ConnectionActivity::class.java)
-            startActivity(intent)
-        }
-
-        findViewById<Button>(R.id.settingsButton).setOnClickListener {
-            // Navigate to settings screen
+        findViewById<MaterialCardView>(R.id.settingsCard).setOnClickListener {
             val intent = Intent(this, SettingsActivity::class.java)
             startActivity(intent)
         }

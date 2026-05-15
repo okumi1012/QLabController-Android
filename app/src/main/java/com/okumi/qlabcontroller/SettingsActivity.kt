@@ -1,10 +1,8 @@
 package com.okumi.qlabcontroller
 
-import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
 import com.google.android.material.card.MaterialCardView
@@ -21,7 +19,6 @@ class SettingsActivity : AppCompatActivity() {
 
         setupThemeCard()
         setupLoggingCard()
-        setupDebugCard()
 
         findViewById<Button>(R.id.backButton).setOnClickListener {
             finish()
@@ -52,30 +49,6 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         updateDebugLogStatus(debugLogStatus)
-    }
-
-    private fun setupDebugCard() {
-        findViewById<MaterialCardView>(R.id.debugCard).setOnClickListener {
-            if (!settingsManager.loggingEnabled) {
-                AlertDialog.Builder(this)
-                    .setTitle("Logging Disabled")
-                    .setMessage("Debug logging is currently disabled. Enable it to start collecting logs.")
-                    .setPositiveButton("Enable") { _, _ ->
-                        settingsManager.loggingEnabled = true
-                        findViewById<SwitchCompat>(R.id.loggingSwitch).isChecked = true
-                        openDebugLog()
-                    }
-                    .setNegativeButton("Cancel", null)
-                    .show()
-            } else {
-                openDebugLog()
-            }
-        }
-    }
-
-    private fun openDebugLog() {
-        val intent = Intent(this, DebugLogActivity::class.java)
-        startActivity(intent)
     }
 
     private fun showThemeDialog(themeDescription: TextView) {

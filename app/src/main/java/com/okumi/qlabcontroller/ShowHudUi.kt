@@ -56,11 +56,17 @@ object ShowHudUi {
 
     fun setStatusChip(textView: TextView, label: String, state: String) {
         textView.text = label.uppercase()
-        textView.setTextColor(textView.context.getColor(R.color.show_bg))
+        val normalizedState = state.lowercase()
+        textView.setTextColor(
+            textView.context.getColor(
+                if (normalizedState == "inactive") R.color.show_dim else R.color.show_bg
+            )
+        )
         textView.setTypeface(Typeface.DEFAULT, Typeface.BOLD)
         textView.maxLines = 1
         textView.ellipsize = TextUtils.TruncateAt.END
-        val color = when (state.lowercase()) {
+        textView.alpha = if (normalizedState == "inactive") 0.58f else 1f
+        val color = when (normalizedState) {
             "normal", "ready" -> R.color.show_ok
             "warning" -> R.color.show_prepare
             "danger" -> R.color.show_danger
